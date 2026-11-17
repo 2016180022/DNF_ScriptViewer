@@ -1,0 +1,15 @@
+# 문서 레포·레퍼런스·개인 자료 (공개 레포에 올리지 않음)
+/_docs/
+/Resource/
+/Claude outputs/
+
+# 캡처 영상 (IP — 레포에 포함 금지)
+*.mp4
+*.webm
+
+# .NET / Visual Studio
+bin/
+obj/
+.vs/
+*.user
+*.suo

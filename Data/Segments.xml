@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  DNF_ScriptViewer - 구간 정의 (2026-11-18, 테스트 영상 기준 초안)
+  - 구간 = 연계 묶음 × 세팅마다 끊지 않고 찍은 테이크 하나
+  - VideoStart / VideoEnd: 영상 시작 기준 ms
+  - Mark Time: 구간 시작(VideoStart) 기준 ms, 상태 변경만 기록
+  - DefaultSetting: 모든 구간에 적용. 구간의 Setting이 있으면 그쪽이 우선. 적지 않은 스킬은 VP 0
+  - 임시 토큰(@FLASH 등)은 ActionScript.xml 맨 위 목록과 같음
+
+  [주의] 아래 Mark는 6~20fps로 본 대략값 (±50~170ms). 최종본 영상이 오면 60fps로 다시 측정
+  [주의] 류탄 보유 스택(*Stock) 시작값은 영상에서 읽지 못해 임시로 3. 측정 필요
+-->
+<Segments>
+
+  <Video Id="main" Source="youtube:{ID}" />
+
+  <!-- 모든 구간 공통 세팅 (끄는 일이 없는 스킬) -->
+  <DefaultSetting Skill="@PHOTO" VP="1" />
+
+  <!-- 연계 1: 지상 평타 7타, 지상 섬광·빙결 한 개씩 -->
+  <Segment Name="연계 1 지상 평타·류탄" Order="1" Combo="combo_1" Video="main"
+           VideoStart="8300" VideoEnd="16900" Input="Input/combo_1.xml">
+    <Start State="Idle">
+      <Var Name="Height" Value="0" />
+      <Var Name="NitroCount" Value="8" />
+      <Var Name="FlashStock" Value="3" />
+      <Var Name="IceStock" Value="3" />
+      <Var Name="FlashCount" Value="0" />
+      <Var Name="IceCount" Value="0" />
+    </Start>
+    <Mark Time="0"    State="Idle" />
+    <Mark Time="700"  State="GroundAttack" />
+    <Mark Time="1700" State="GroundAttack_Finish" />
+    <Mark Time="2200" State="Idle" />
+    <Mark Time="3550" State="Flash_Ground" />
+    <Mark Time="3800" State="Idle" />
+    <Mark Time="5700" State="Ice_Ground" />
+    <Mark Time="5950" State="Idle" />
+  </Segment>
+
+  <!-- 연계 2: 공중 평타 → 높이 강제 착지 / 점프 후 공중 섬광·빙결 → 착지 -->
+  <Segment Name="연계 2 공중 평타·류탄" Order="2" Combo="combo_2" Video="main"
+           VideoStart="17000" VideoEnd="27200" Input="Input/combo_2.xml">
+    <Start State="Idle">
+      <Var Name="Height" Value="0" />
+      <Var Name="NitroCount" Value="8" />
+      <Var Name="FlashStock" Value="3" />
+      <Var Name="IceStock" Value="3" />
+      <Var Name="FlashCount" Value="1" />   <!-- 연계 1에서 1번씩 투척 -->
+      <Var Name="IceCount" Value="1" />
+    </Start>
+    <Mark Time="0"    State="Idle" />
+    <Mark Time="1150" State="Jump" />
+    <Mark Time="1950" State="AirAttack" />
+    <Mark Time="5000" State="Landing" />
+    <Mark Time="5150" State="WakeUp" />
+    <Mark Time="5300" State="Idle" />
+    <Mark Time="7350" State="Jump" />
+    <Mark Time="8000" State="Flash_Air" />
+    <Mark Time="8660" State="Ice_Air" />
+    <Mark Time="9000" State="Down" />
+    <Mark Time="9500" State="Landing" />
+    <Mark Time="9830" State="Idle" />
+  </Segment>
+
+  <!-- 연계 3: 지상 강화 섬광·빙결 / 공중 섬광·빙결 2번씩 → 착지 / 공중 강화 섬광 → 니트로 착지 / 공중 강화 빙결 → 니트로 착지 -->
+  <Segment Name="연계 3 강화 류탄·니트로 착지" Order="3" Combo="combo_3" Video="main"
+           VideoStart="27200" VideoEnd="52000" Input="Input/combo_3.xml">
+    <Start State="Idle">
+      <Var Name="Height" Value="0" />
+      <Var Name="NitroCount" Value="8" />
+      <Var Name="FlashStock" Value="3" />
+      <Var Name="IceStock" Value="3" />
+      <Var Name="FlashCount" Value="2" />   <!-- 다음 투척이 세 번째 → 지상 강화 -->
+      <Var Name="IceCount" Value="2" />
+    </Start>
+    <Mark Time="0"     State="Idle" />
+    <Mark Time="2460"  State="Flash_Ground" />   <!-- 강화 -->
+    <Mark Time="2700"  State="Idle" />
+    <Mark Time="6130"  State="Ice_Ground" />     <!-- 강화 -->
+    <Mark Time="6300"  State="Idle" />
+    <Mark Time="10460" State="Jump" />
+    <Mark Time="11130" State="Flash_Air" />
+    <Mark Time="11630" State="Ice_Air" />
+    <Mark Time="12130" State="Flash_Air" />
+    <Mark Time="12630" State="Ice_Air" />
+    <Mark Time="13100" State="Down" />
+    <Mark Time="13460" State="Landing" />
+    <Mark Time="13800" State="Idle" />
+    <Mark Time="15800" State="Jump" />
+    <Mark Time="16460" State="Flash_Air" />      <!-- 강화 -->
+    <Mark Time="16900" State="NitroDown" />
+    <Mark Time="17150" State="Landing" />
+    <Mark Time="17300" State="Idle" />
+    <Mark Time="19650" State="Jump" />
+    <Mark Time="20300" State="Ice_Air" />        <!-- 강화 -->
+    <Mark Time="20900" State="NitroDown" />
+    <Mark Time="21150" State="Landing" />
+    <Mark Time="21250" State="Idle" />
+  </Segment>
+
+  <!-- 연계 4: 공중 섬광·빙결 → 오픈 파이어(VP 0) → 섬광·빙결 → 착지 -->
+  <Segment Name="연계 4 오픈 파이어" Order="4" Combo="combo_4" Video="main"
+           VideoStart="52000" VideoEnd="58500" Input="Input/combo_4.xml">
+    <Start State="Idle">
+      <Var Name="Height" Value="0" />
+      <Var Name="NitroCount" Value="8" />
+      <Var Name="FlashStock" Value="3" />
+      <Var Name="IceStock" Value="3" />
+      <Var Name="BurstStock" Value="3" />
+      <Var Name="FlashCount" Value="0" />   <!-- 연계 3 강화 후 0 -->
+      <Var Name="IceCount" Value="0" />
+    </Start>
+    <Mark Time="0"    State="Idle" />
+    <Mark Time="1500" State="Jump" />
+    <Mark Time="2000" State="Flash_Air" />
+    <Mark Time="2500" State="Ice_Air" />
+    <Mark Time="3000" State="OpenFire" />
+    <Mark Time="3660" State="Flash_Air" />
+    <Mark Time="4160" State="Ice_Air" />
+    <Mark Time="4500" State="Down" />
+    <Mark Time="5000" State="Landing" />
+    <Mark Time="5300" State="Idle" />
+  </Segment>
+
+  <!-- 연계 5: 공중 섬광·빙결 → 오픈 파이어 VP1 (보유 류탄 전부 투척) → 류탄이 없어 착지 -->
+  <Segment Name="연계 5 오픈 파이어 VP1" Order="5" Combo="combo_5" Video="main"
+           VideoStart="64000" VideoEnd="72500" Input="Input/combo_5.xml">
+    <Setting Skill="@OPENFIRE" VP="1" />
+    <Start State="Idle">
+      <Var Name="Height" Value="0" />
+      <Var Name="NitroCount" Value="8" />
+      <Var Name="FlashStock" Value="3" />
+      <Var Name="IceStock" Value="3" />
+      <Var Name="BurstStock" Value="3" />
+      <Var Name="PhotoStock" Value="3" />
+      <Var Name="FlashCount" Value="2" />   <!-- 연계 4에서 2번씩 (오픈 파이어는 카운트 영향 없음). 다음 투척 강화 여부 영상으로 확인 필요 -->
+      <Var Name="IceCount" Value="2" />
+    </Start>
+    <Mark Time="0"    State="Idle" />
+    <Mark Time="2000" State="Jump" />
+    <Mark Time="2660" State="Flash_Air" />
+    <Mark Time="3330" State="Ice_Air" />
+    <Mark Time="3660" State="OpenFire" />
+    <Mark Time="4200" State="Down" />
+    <Mark Time="4830" State="Landing" />
+    <Mark Time="5000" State="Idle" />
+  </Segment>
+
+  <!-- 연계 6: 스탠바이 레디 시전 → 섬광·빙결 연속 투척 → 지속 시간 종료 시 피니시 → 착지 -->
+  <Segment Name="연계 6 스탠바이 레디" Order="6" Combo="combo_6" Video="main"
+           VideoStart="72800" VideoEnd="80900" Input="Input/combo_6.xml">
+    <Start State="Idle">
+      <Var Name="Height" Value="0" />
+      <Var Name="NitroCount" Value="8" />
+      <Var Name="FlashStock" Value="3" />
+      <Var Name="IceStock" Value="3" />
+      <Var Name="FlashCount" Value="0" />   <!-- TODO: 연계 5까지의 누적값 확인 -->
+      <Var Name="IceCount" Value="0" />
+      <Var Name="StandbyReady_FinishAttack" Value="0" />
+    </Start>
+    <Mark Time="0"    State="Idle" />
+    <Mark Time="860"  State="Jump" />
+    <Mark Time="1360" State="StandbyReady_Cast" />
+    <Mark Time="1530" State="StandbyReady_Hover" />
+    <!-- 체공 ↔ 투척 왕복 Mark는 최종본에서 측정 (아주 짧게 반복) -->
+    <Mark Time="4030" State="StandbyReady_Finish" />
+    <Mark Time="5860" State="Idle" />   <!-- 하강·착지는 이펙트에 가려 최종본에서 측정 -->
+  </Segment>
+
+</Segments>

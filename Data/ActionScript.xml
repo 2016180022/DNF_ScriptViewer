@@ -1,0 +1,384 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  DNF_ScriptViewer - 스핏파이어(여) ActionScript 뼈대 (2026-11-18)
+  - 시간 단위: ms (StartTime, EndTime, BranchTime). 값이 비어 있는 곳은 측정 후 기입
+  - Func는 정의(FuncDef)와 참조(CallFunc)를 분리
+  - 속성값 안의 '<', '&'는 '&lt;', '&amp;'로 표기
+
+  [임시 토큰] 데이터 작성 때 실제 값으로 바꿀 자리
+  @FLASH     섬광류탄 스킬 키          @ICE       빙결류탄 스킬 키
+  @BURST     파열류탄 스킬 키 (오픈 파이어 투척용, 단독 액션 없음)
+  @PHOTO     포토빌라이저 스킬 키 (오픈 파이어 VP 투척용, 단독 액션 없음)
+  @OPENFIRE  오픈 파이어 스킬 키       @STANDBY   스탠바이 레디 스킬 키
+  @NITRO     니트로 모터 스킬 키       @LAND_HEIGHT  강제 착지 기준 높이
+  @STANDBY_BUFF  스탠바이 레디 지속 시간 버프 키
+  VP 조건은 SkillLearned(스킬 키 × 100 + VP) → 예: SkillLearned(@OPENFIRE01)
+
+  [입력 커맨드] Jump, Attack, Move, Dash, NitroDown, Skill_{스킬 키}
+  [변수 변경] <SetVar>의 Op: Set | Add (형식은 작성 중 수정 가능)
+  [Loop] LoopCount() = 같은 액션으로 연속 재진입한 횟수 (1타 = 0). Loop 브랜치는 NormalBranch의 BranchTime~BranchEndTime 구간에서만
+  [CoolTime] 액션의 CoolTime 속성으로 SkillInfo 쿨타임을 불러옴 (지상·공중 고정값, 스탠바이 투척은 0)
+  [니트로 0] 공중에서 모든 스킬·평타 불가. 하강(액션 안 이동 가능)과 니트로 하강만 가능
+-->
+<ActionScript>
+
+  <!-- ===================== 캐릭터 변수 ===================== -->
+  <CharacterVariables>
+    <Var Name="Height" Init="0" />                       <!-- 높이 (물리 없이 스크립트가 직접 조절) -->
+    <Var Name="NitroCount" Init="8" />                   <!-- 니트로 모터 스택. 착지 시 8로 회복 -->
+    <Var Name="FlashStock" Init="3" />                   <!-- 류탄 보유 스택 (종류별) -->
+    <Var Name="IceStock" Init="3" />
+    <Var Name="BurstStock" Init="3" />
+    <Var Name="PhotoStock" Init="3" />
+    <Var Name="FlashCount" Init="0" />                   <!-- 강화 카운트 (종류별, 세 번째마다 강화) -->
+    <Var Name="IceCount" Init="0" />
+    <Var Name="StandbyReady_FinishAttack" Init="0" />
+  </CharacterVariables>
+
+  <!-- ===================== Func 정의 ===================== -->
+
+  <!-- ① 공중 액션 최우선: 높이 기준 이하면 강제 착지 -->
+  <FuncDef Name="AirForceLanding">
+    <Branch ActionName="Landing" Condition="Height &lt;= @LAND_HEIGHT" />
+  </FuncDef>
+
+  <!-- ② 공중 액션 전체: 스페이스바(NitroDown)로 니트로 하강 -->
+  <FuncDef Name="NitroDownBranch">
+    <Branch ActionName="NitroDown" Condition="NitroDown" />
+  </FuncDef>
+
+  <!-- ③ 일반 브랜치: 스탠바이 레디 유도 -->
+  <!-- 버프가 있으면 전용 체공으로, 버프가 끝났으면(지속 시간 종료) 피니시로 -->
+  <FuncDef Name="StandbyBranch">
+    <Branch ActionName="StandbyReady_Hover" Condition="CheckBuff(@STANDBY_BUFF)" />
+    <Branch ActionName="StandbyReady_Finish" Condition="StandbyReady_FinishAttack >= 1 &amp;&amp; !CheckBuff(@STANDBY_BUFF)" />
+  </FuncDef>
+
+  <!-- 지상 공용 브랜치 -->
+  <FuncDef Name="GroundBranch">
+    <Branch ActionName="Flash_Ground" Condition="Skill_@FLASH &amp;&amp; FlashStock >= 1" />
+    <Branch ActionName="Ice_Ground" Condition="Skill_@ICE &amp;&amp; IceStock >= 1" />
+    <Branch ActionName="GroundAttack" Condition="Attack" />
+    <Branch ActionName="Jump" Condition="Jump" />
+    <Branch ActionName="Dash" Condition="Dash" />
+    <Branch ActionName="Move" Condition="Move" />
+  </FuncDef>
+
+  <!-- 공중 공용 브랜치 -->
+  <!-- 니트로 스택 0이면 모든 스킬·평타 불가. 하강(이동 가능)과 니트로 하강만 가능 -->
+  <FuncDef Name="AirBranch">
+    <Branch ActionName="StandbyReady_Cast" Condition="Skill_@STANDBY &amp;&amp; NitroCount >= 1" />
+    <Branch ActionName="OpenFire" Condition="Skill_@OPENFIRE &amp;&amp; NitroCount >= 1" />
+    <Branch ActionName="Flash_Air" Condition="Skill_@FLASH &amp;&amp; FlashStock >= 1 &amp;&amp; NitroCount >= 1" />
+    <Branch ActionName="Ice_Air" Condition="Skill_@ICE &amp;&amp; IceStock >= 1 &amp;&amp; NitroCount >= 1" />
+    <Branch ActionName="AirAttack" Condition="Attack &amp;&amp; NitroCount >= 1" />
+  </FuncDef>
+
+  <!-- 강화 카운트: 종류별 세 번째 투척마다 강화 AttackFrame (오픈 파이어는 카운트에 영향 없음) -->
+  <!-- 사용 예: 투척 액션 안에서 CallFunc → 카운트 +1, 3이 되면 강화 적용 후 0 -->
+
+  <!-- ===================== 기본 ===================== -->
+
+  <Idle Animation="ani_idle">
+    <NormalBranch BranchTime="0">
+      <CallFunc Name="GroundBranch" />
+    </NormalBranch>
+  </Idle>
+
+  <Move Animation="ani_move">
+    <NormalBranch BranchTime="0">
+      <CallFunc Name="GroundBranch" />
+      <Branch ActionName="Idle" Condition="!Move" />
+    </NormalBranch>
+  </Move>
+
+  <Dash Animation="ani_dash">
+    <NormalBranch BranchTime="0">
+      <CallFunc Name="GroundBranch" />
+      <Branch ActionName="Idle" Condition="!Dash" />
+    </NormalBranch>
+  </Dash>
+
+  <!-- 점프: 상승 후 Down으로 -->
+  <Jump Animation="ani_jump">
+    <SetVar StartTime="0" Name="Height" Op="Set" Value="" />
+    <CallFunc Name="AirForceLanding" />
+    <NormalBranch BranchTime="">
+      <CallFunc Name="StandbyBranch" />
+      <CallFunc Name="NitroDownBranch" />
+      <CallFunc Name="AirBranch" />
+      <Branch ActionName="Down" Condition="ActionEnd()" />
+    </NormalBranch>
+  </Jump>
+
+  <!-- 일반 하강 -->
+  <Down Animation="ani_down">
+    <SetVar StartTime="0" Name="Height" Op="Add" Value="" />   <!-- 하강 속도 (Repeat 여부는 작성 때 결정) -->
+    <CallFunc Name="AirForceLanding" />
+    <NormalBranch BranchTime="0">
+      <CallFunc Name="StandbyBranch" />
+      <CallFunc Name="NitroDownBranch" />
+      <CallFunc Name="AirBranch" />
+    </NormalBranch>
+  </Down>
+
+  <!-- 니트로 하강: 아래쪽 분사는 이 액션의 고증 이펙트 (스택 무관, 소모 0) -->
+  <NitroDown Animation="ani_nitro_down">
+    <CallFunc Name="AirForceLanding" />
+    <NormalBranch BranchTime="">
+      <Branch ActionName="Landing" Condition="ActionEnd()" />
+    </NormalBranch>
+  </NitroDown>
+
+  <!-- 착지 (일반·니트로 공용) -->
+  <Landing Animation="ani_landing">
+    <SetVar StartTime="0" Name="Height" Op="Set" Value="0" />
+    <SetVar StartTime="0" Name="NitroCount" Op="Set" Value="8" />
+    <NormalBranch BranchTime="">
+      <Branch ActionName="WakeUp" Condition="ActionEnd()" />
+    </NormalBranch>
+  </Landing>
+
+  <!-- 일어남 (아주 짧게) -->
+  <WakeUp Animation="ani_wakeup">
+    <NormalBranch BranchTime="">
+      <CallFunc Name="GroundBranch" />
+      <Branch ActionName="Idle" Condition="ActionEnd()" />
+    </NormalBranch>
+  </WakeUp>
+
+  <!-- ===================== 평타 ===================== -->
+
+  <!-- 지상 평타 1~6타 Loop: 같은 액션 안에서 Loop 횟수로 7타 진입 제어 -->
+  <!-- LoopCount() = 이 액션으로 연속 재진입한 횟수 (런타임 함수, 1타 = 0) -->
+  <!-- Loop 브랜치는 특정 시간대(BranchTime~BranchEndTime)에만, 키 입력(Attack)과 키 유지(KeyDown) 모두 허용 -->
+  <GroundAttack Animation="ani_ground_shoot">
+    <AttackFrame StartTime="" />
+    <NormalBranch BranchTime="" BranchEndTime="">
+      <Branch ActionName="GroundAttack_Finish" Condition="(Attack || KeyDown) &amp;&amp; LoopCount() >= 5" />
+      <Branch ActionName="GroundAttack" Condition="(Attack || KeyDown) &amp;&amp; LoopCount() &lt; 5" />
+    </NormalBranch>
+    <NormalBranch BranchTime="">
+      <CallFunc Name="GroundBranch" />
+      <Branch ActionName="Idle" Condition="ActionEnd()" />
+    </NormalBranch>
+  </GroundAttack>
+
+  <!-- 지상 평타 7타 -->
+  <GroundAttack_Finish Animation="ani_ground_shoot_finish">
+    <AttackFrame StartTime="" />
+    <NormalBranch BranchTime="">
+      <CallFunc Name="GroundBranch" />
+      <Branch ActionName="Idle" Condition="ActionEnd()" />
+    </NormalBranch>
+  </GroundAttack_Finish>
+
+  <!-- 공중 평타 1~17타 Loop: 사격 반동으로 체공 (니트로 소모·이펙트 없음), 타격마다 Height 감소 -->
+  <AirAttack Animation="ani_air_shoot">
+    <AttackFrame StartTime="" />
+    <SetVar StartTime="" Name="Height" Op="Add" Value="" />
+    <CallFunc Name="AirForceLanding" />
+    <NormalBranch BranchTime="" BranchEndTime="">
+      <Branch ActionName="AirAttack" Condition="(Attack || KeyDown) &amp;&amp; LoopCount() &lt; 16 &amp;&amp; NitroCount >= 1" />
+    </NormalBranch>
+    <NormalBranch BranchTime="">
+      <CallFunc Name="StandbyBranch" />
+      <CallFunc Name="NitroDownBranch" />
+      <CallFunc Name="AirBranch" />
+      <Branch ActionName="Down" Condition="ActionEnd()" />
+    </NormalBranch>
+  </AirAttack>
+
+  <!-- ===================== 류탄 (6개 액션, 애니는 지상/공중 2개) ===================== -->
+
+  <!-- 섬광 지상: 니트로 소모 0, 이펙트 없음 -->
+  <Flash_Ground SkillKey="@FLASH" CoolTime="" Animation="ani_ground_throw">
+    <SetVar StartTime="0" Name="FlashStock" Op="Add" Value="-1" />
+    <SetVar StartTime="0" Name="FlashCount" Op="Add" Value="1" />
+    <AttackFrame StartTime="" Condition="FlashCount != 3">
+      <BuffFrame SkillKey="@FLASH" BuffInfo="" />
+    </AttackFrame>
+    <AttackFrame StartTime="" Condition="FlashCount == 3">   <!-- 강화 -->
+      <BuffFrame SkillKey="@FLASH" BuffInfo="" />
+    </AttackFrame>
+    <SetVar StartTime="" Name="FlashCount" Op="Set" Value="0" Condition="FlashCount == 3" />
+    <NormalBranch BranchTime="">
+      <CallFunc Name="GroundBranch" />
+      <Branch ActionName="Idle" Condition="ActionEnd()" />
+    </NormalBranch>
+  </Flash_Ground>
+
+  <!-- 섬광 공중: 니트로 -1, 위쪽 분사 이펙트 (확장 1순위) -->
+  <Flash_Air SkillKey="@FLASH" CoolTime="" Animation="ani_air_throw">
+    <SetVar StartTime="0" Name="NitroCount" Op="Add" Value="-1" />
+    <SetVar StartTime="0" Name="FlashStock" Op="Add" Value="-1" />
+    <SetVar StartTime="0" Name="FlashCount" Op="Add" Value="1" />
+    <AttackFrame StartTime="" Condition="FlashCount != 3">
+      <BuffFrame SkillKey="@FLASH" BuffInfo="" />
+    </AttackFrame>
+    <AttackFrame StartTime="" Condition="FlashCount == 3">
+      <BuffFrame SkillKey="@FLASH" BuffInfo="" />
+    </AttackFrame>
+    <SetVar StartTime="" Name="FlashCount" Op="Set" Value="0" Condition="FlashCount == 3" />
+    <CallFunc Name="AirForceLanding" />
+    <NormalBranch BranchTime="">
+      <CallFunc Name="StandbyBranch" />
+      <CallFunc Name="NitroDownBranch" />
+      <CallFunc Name="AirBranch" />
+      <Branch ActionName="Down" Condition="ActionEnd()" />
+    </NormalBranch>
+  </Flash_Air>
+
+  <!-- 빙결 지상 -->
+  <Ice_Ground SkillKey="@ICE" CoolTime="" Animation="ani_ground_throw">
+    <SetVar StartTime="0" Name="IceStock" Op="Add" Value="-1" />
+    <SetVar StartTime="0" Name="IceCount" Op="Add" Value="1" />
+    <AttackFrame StartTime="" Condition="IceCount != 3">
+      <BuffFrame SkillKey="@ICE" BuffInfo="" />
+    </AttackFrame>
+    <AttackFrame StartTime="" Condition="IceCount == 3">
+      <BuffFrame SkillKey="@ICE" BuffInfo="" />
+    </AttackFrame>
+    <SetVar StartTime="" Name="IceCount" Op="Set" Value="0" Condition="IceCount == 3" />
+    <NormalBranch BranchTime="">
+      <CallFunc Name="GroundBranch" />
+      <Branch ActionName="Idle" Condition="ActionEnd()" />
+    </NormalBranch>
+  </Ice_Ground>
+
+  <!-- 빙결 공중 -->
+  <Ice_Air SkillKey="@ICE" CoolTime="" Animation="ani_air_throw">
+    <SetVar StartTime="0" Name="NitroCount" Op="Add" Value="-1" />
+    <SetVar StartTime="0" Name="IceStock" Op="Add" Value="-1" />
+    <SetVar StartTime="0" Name="IceCount" Op="Add" Value="1" />
+    <AttackFrame StartTime="" Condition="IceCount != 3">
+      <BuffFrame SkillKey="@ICE" BuffInfo="" />
+    </AttackFrame>
+    <AttackFrame StartTime="" Condition="IceCount == 3">
+      <BuffFrame SkillKey="@ICE" BuffInfo="" />
+    </AttackFrame>
+    <SetVar StartTime="" Name="IceCount" Op="Set" Value="0" Condition="IceCount == 3" />
+    <CallFunc Name="AirForceLanding" />
+    <NormalBranch BranchTime="">
+      <CallFunc Name="StandbyBranch" />
+      <CallFunc Name="NitroDownBranch" />
+      <CallFunc Name="AirBranch" />
+      <Branch ActionName="Down" Condition="ActionEnd()" />
+    </NormalBranch>
+  </Ice_Air>
+
+  <!-- 스탠바이 섬광: 기존 공중 투척 액션에서 류탄 스택·니트로 스택 소모 줄을 뺀 전용 액션 -->
+  <!-- 지속 시간 동안 류탄 스택이 1 이하로 내려가지 않음, 쿨타임 0, 강화 카운트는 정상 증가 -->
+  <!-- 버프 종료 시 피니시는 체공 액션(Hover)으로 돌아가서 처리 (StandbyBranch를 부르면 버프가 있는 동안 투척이 바로 끊김) -->
+  <StandbyReady_Flash SkillKey="@FLASH" CoolTime="0" Animation="ani_air_throw">
+    <SetVar StartTime="0" Name="FlashCount" Op="Add" Value="1" />
+    <AttackFrame StartTime="" Condition="FlashCount != 3">
+      <BuffFrame SkillKey="@FLASH" BuffInfo="" />
+    </AttackFrame>
+    <AttackFrame StartTime="" Condition="FlashCount == 3">   <!-- 강화 -->
+      <BuffFrame SkillKey="@FLASH" BuffInfo="" />
+    </AttackFrame>
+    <SetVar StartTime="" Name="FlashCount" Op="Set" Value="0" Condition="FlashCount == 3" />
+    <NormalBranch BranchTime="">
+      <Branch ActionName="StandbyReady_Hover" Condition="ActionEnd()" />
+    </NormalBranch>
+  </StandbyReady_Flash>
+
+  <!-- 스탠바이 빙결 -->
+  <StandbyReady_Ice SkillKey="@ICE" CoolTime="0" Animation="ani_air_throw">
+    <SetVar StartTime="0" Name="IceCount" Op="Add" Value="1" />
+    <AttackFrame StartTime="" Condition="IceCount != 3">
+      <BuffFrame SkillKey="@ICE" BuffInfo="" />
+    </AttackFrame>
+    <AttackFrame StartTime="" Condition="IceCount == 3">   <!-- 강화 -->
+      <BuffFrame SkillKey="@ICE" BuffInfo="" />
+    </AttackFrame>
+    <SetVar StartTime="" Name="IceCount" Op="Set" Value="0" Condition="IceCount == 3" />
+    <NormalBranch BranchTime="">
+      <Branch ActionName="StandbyReady_Hover" Condition="ActionEnd()" />
+    </NormalBranch>
+  </StandbyReady_Ice>
+
+  <!-- ===================== 오픈 파이어 ===================== -->
+
+  <!-- 니트로 -1, 니트로 이펙트 없음 (시전 섬광 색은 아이템 이펙트라 제외) -->
+  <!-- 기본: 파열·빙결·섬광 2개씩. VP: 보유 스택만큼 종류별 최대 3개 추가 (첫 개 강화, 2·3번째 일반), 스택 0으로. 강화 카운트는 변화 없음 -->
+  <OpenFire SkillKey="@OPENFIRE" Animation="ani_openfire">
+    <SetVar StartTime="0" Name="NitroCount" Op="Add" Value="-1" />
+
+    <!-- 기본 6개 -->
+    <AttackFrame StartTime=""><BuffFrame SkillKey="@BURST" BuffInfo="" /></AttackFrame>
+    <AttackFrame StartTime=""><BuffFrame SkillKey="@BURST" BuffInfo="" /></AttackFrame>
+    <AttackFrame StartTime=""><BuffFrame SkillKey="@ICE" BuffInfo="" /></AttackFrame>
+    <AttackFrame StartTime=""><BuffFrame SkillKey="@ICE" BuffInfo="" /></AttackFrame>
+    <AttackFrame StartTime=""><BuffFrame SkillKey="@FLASH" BuffInfo="" /></AttackFrame>
+    <AttackFrame StartTime=""><BuffFrame SkillKey="@FLASH" BuffInfo="" /></AttackFrame>
+
+    <!-- VP1 추가 투척: 파열 -->
+    <AttackFrame StartTime="" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; BurstStock >= 1"><BuffFrame SkillKey="@BURST" BuffInfo="" /></AttackFrame>   <!-- 강화 -->
+    <AttackFrame StartTime="" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; BurstStock >= 2"><BuffFrame SkillKey="@BURST" BuffInfo="" /></AttackFrame>
+    <AttackFrame StartTime="" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; BurstStock >= 3"><BuffFrame SkillKey="@BURST" BuffInfo="" /></AttackFrame>
+    <!-- VP1 추가 투척: 섬광 -->
+    <AttackFrame StartTime="" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; FlashStock >= 1"><BuffFrame SkillKey="@FLASH" BuffInfo="" /></AttackFrame>   <!-- 강화 -->
+    <AttackFrame StartTime="" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; FlashStock >= 2"><BuffFrame SkillKey="@FLASH" BuffInfo="" /></AttackFrame>
+    <AttackFrame StartTime="" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; FlashStock >= 3"><BuffFrame SkillKey="@FLASH" BuffInfo="" /></AttackFrame>
+    <!-- VP1 추가 투척: 빙결 -->
+    <AttackFrame StartTime="" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; IceStock >= 1"><BuffFrame SkillKey="@ICE" BuffInfo="" /></AttackFrame>   <!-- 강화 -->
+    <AttackFrame StartTime="" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; IceStock >= 2"><BuffFrame SkillKey="@ICE" BuffInfo="" /></AttackFrame>
+    <AttackFrame StartTime="" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; IceStock >= 3"><BuffFrame SkillKey="@ICE" BuffInfo="" /></AttackFrame>
+    <!-- VP1 추가 투척: 포토빌라이저 (포토빌라이저 VP 습득 시) -->
+    <AttackFrame StartTime="" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; SkillLearned(@PHOTO01) &amp;&amp; PhotoStock >= 1"><BuffFrame SkillKey="@PHOTO" BuffInfo="" /></AttackFrame>
+    <AttackFrame StartTime="" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; SkillLearned(@PHOTO01) &amp;&amp; PhotoStock >= 2"><BuffFrame SkillKey="@PHOTO" BuffInfo="" /></AttackFrame>
+    <AttackFrame StartTime="" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; SkillLearned(@PHOTO01) &amp;&amp; PhotoStock >= 3"><BuffFrame SkillKey="@PHOTO" BuffInfo="" /></AttackFrame>
+
+    <!-- VP1: 보유 류탄 스택 0 (AttackFrame 판정 이후 시점) -->
+    <SetVar StartTime="" Name="BurstStock" Op="Set" Value="0" Condition="SkillLearned(@OPENFIRE01)" />
+    <SetVar StartTime="" Name="FlashStock" Op="Set" Value="0" Condition="SkillLearned(@OPENFIRE01)" />
+    <SetVar StartTime="" Name="IceStock" Op="Set" Value="0" Condition="SkillLearned(@OPENFIRE01)" />
+    <SetVar StartTime="" Name="PhotoStock" Op="Set" Value="0" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; SkillLearned(@PHOTO01)" />
+
+    <CallFunc Name="AirForceLanding" />
+    <NormalBranch BranchTime="">
+      <CallFunc Name="StandbyBranch" />
+      <CallFunc Name="NitroDownBranch" />
+      <CallFunc Name="AirBranch" />
+      <Branch ActionName="Down" Condition="ActionEnd()" />
+    </NormalBranch>
+  </OpenFire>
+
+  <!-- ===================== 스탠바이 레디 ===================== -->
+
+  <!-- 시전 (공중): 액션 자체 무적 (표시용) -->
+  <StandbyReady_Cast SkillKey="@STANDBY" Animation="ani_standby_cast" Invincible="true">
+    <SetVar StartTime="0" Name="StandbyReady_FinishAttack" Op="Add" Value="1" />
+    <BuffFrame StartTime="" SkillKey="@STANDBY" BuffInfo="" />   <!-- 지속 시간 버프 -->
+    <NormalBranch BranchTime="">
+      <Branch ActionName="StandbyReady_Hover" Condition="ActionEnd()" />
+    </NormalBranch>
+  </StandbyReady_Cast>
+
+  <!-- 전용 체공: 분사는 이 액션의 고증 이펙트 (스택 무관). 투척 키를 누르고 있으면 투척과 빠르게 왕복 -->
+  <StandbyReady_Hover Animation="ani_standby_hover">
+    <NormalBranch BranchTime="0">
+      <!-- 체공 액션 자신으로 다시 브랜치하지 않도록 StandbyBranch 대신 피니시 줄만 둠 -->
+      <Branch ActionName="StandbyReady_Finish" Condition="StandbyReady_FinishAttack >= 1 &amp;&amp; !CheckBuff(@STANDBY_BUFF)" />
+      <Branch ActionName="StandbyReady_Flash" Condition="Skill_@FLASH || (KeyDown &amp;&amp; Skill_@FLASH)" />
+      <Branch ActionName="StandbyReady_Ice" Condition="Skill_@ICE || (KeyDown &amp;&amp; Skill_@ICE)" />
+    </NormalBranch>
+  </StandbyReady_Hover>
+
+  <!-- 피니시: 무적, 짧게, 타이밍 제한 없이 모든 액션으로 브랜치 -->
+  <StandbyReady_Finish SkillKey="@STANDBY" Animation="ani_standby_finish" Invincible="true">
+    <SetVar StartTime="0" Name="StandbyReady_FinishAttack" Op="Set" Value="0" />
+    <AttackFrame StartTime="">
+      <BuffFrame SkillKey="@STANDBY" BuffInfo="" />
+    </AttackFrame>
+    <CallFunc Name="AirForceLanding" />
+    <NormalBranch BranchTime="0">
+      <CallFunc Name="NitroDownBranch" />
+      <CallFunc Name="AirBranch" />
+      <Branch ActionName="Down" Condition="ActionEnd()" />
+    </NormalBranch>
+  </StandbyReady_Finish>
+
+</ActionScript>

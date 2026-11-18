@@ -26,6 +26,7 @@
   <Variable Name="CharacterVariable" StartTime="120" Value="x" Condition="CheckBuff(y)" />
     - Value는 대입. 증감은 식으로 (Ex. Value="NitroStock - 1")
     - EndTime을 함께 적으면 그 구간 동안 매 틱 적용
+  [높이] Height는 물리 없이 구간별 일정 속도로 근사 (점프 +, 하강 -, 공중 평타는 타격마다 감소). 값은 영상 대조 후 조정
   [Loop] LoopCount() = 같은 액션으로 연속 재진입한 횟수 (1타 = 0). Loop 브랜치는 별도 NormalBranch의 StartTime~EndTime 구간에서만
   [CoolTime] 액션의 CoolTime 속성으로 SkillInfo 쿨타임을 불러옴 (지상·공중 고정값, 스탠바이 투척은 0)
   [니트로 0] 공중에서 모든 스킬 불가. 공중 평타, 하강(액션 안 이동 가능), 니트로 하강만 가능
@@ -159,8 +160,9 @@
   <!-- 점프: 상승 후 Down으로 -->
   <!-- ani_Jump 의 구성: 아주 약간 크라우치(준비) 후, 마지막까지 점프 자세 -->
   <Jump SkillKey="None" Animation="ani_jump" GuardType="None">
-    <!-- 점프 구현을 스크립트로 하려면 Height 값을 1프레임마다 줘서 올려야 해 논의 필요 -->
-    <Variable Name="Height" StartTime="5" EndTime="" Value="getPlayerJump()" />
+    <!-- 상승: 구간 동안 매 틱 일정 속도로 증가 (물리 없이 구간별 일정 속도로 근사) -->
+    <!-- 곡선에 가깝게 하려면 구간을 나눠 적음 (Ex. 5~200ms +1.2, 200~ActionEnd() +0.5). 속도 값은 세그먼트 대조 후 조정 -->
+    <Variable Name="Height" StartTime="5" EndTime="ActionEnd()" Value="Height + 0.8" />
 
     <!-- 점프는 상승 동작이라 포스랜딩 넣으면 안됨 -->
     <!-- <ForceLanding_Func /> -->
@@ -175,8 +177,8 @@
 
   <!-- 일반 하강 -->
   <Down SkillKey="None" Animation="ani_down" GuardType="None">
-    <!-- 하강량 (Value="Height - 하강량") -->
-    <Variable Name="Height" StartTime="0" EndTime="" Value="" />
+    <!-- 하강: 액션 내내 매 틱 일정 속도로 감소. 속도 값은 세그먼트 대조 후 조정 -->
+    <Variable Name="Height" StartTime="0" EndTime="ActionEnd()" Value="Height - 0.6" />
     <ForceLanding_Func />
     <NormalBranch StartTime="0" EndTime="ActionEnd()">
       <StandbyReadyBranch_Func />

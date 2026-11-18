@@ -21,12 +21,12 @@
   <Segment Name="연계 1 지상 평타·류탄" Order="1" Combo="combo_1" Video="main"
            VideoStart="8300" VideoEnd="16900" Input="Input/combo_1.xml">
     <Start State="Idle">
-      <Var Name="Height" Value="0" />
-      <Var Name="NitroCount" Value="8" />
-      <Var Name="FlashStock" Value="3" />
-      <Var Name="IceStock" Value="3" />
-      <Var Name="FlashCount" Value="0" />
-      <Var Name="IceCount" Value="0" />
+      <Variable Name="Height" Value="0" />
+      <Variable Name="NitroStock" Value="8" />
+      <Variable Name="FlashStock" Value="3" />
+      <Variable Name="IceStock" Value="3" />
+      <Variable Name="FlashCount" Value="0" />
+      <Variable Name="IceCount" Value="0" />
     </Start>
     <Mark Time="0"    State="Idle" />
     <Mark Time="700"  State="GroundAttack" />
@@ -42,12 +42,12 @@
   <Segment Name="연계 2 공중 평타·류탄" Order="2" Combo="combo_2" Video="main"
            VideoStart="17000" VideoEnd="27200" Input="Input/combo_2.xml">
     <Start State="Idle">
-      <Var Name="Height" Value="0" />
-      <Var Name="NitroCount" Value="8" />
-      <Var Name="FlashStock" Value="3" />
-      <Var Name="IceStock" Value="3" />
-      <Var Name="FlashCount" Value="1" />   <!-- 연계 1에서 1번씩 투척 -->
-      <Var Name="IceCount" Value="1" />
+      <Variable Name="Height" Value="0" />
+      <Variable Name="NitroStock" Value="8" />
+      <Variable Name="FlashStock" Value="3" />
+      <Variable Name="IceStock" Value="3" />
+      <Variable Name="FlashCount" Value="1" />   <!-- 연계 1에서 1번씩 투척 -->
+      <Variable Name="IceCount" Value="1" />
     </Start>
     <Mark Time="0"    State="Idle" />
     <Mark Time="1150" State="Jump" />
@@ -67,12 +67,12 @@
   <Segment Name="연계 3 강화 류탄·니트로 착지" Order="3" Combo="combo_3" Video="main"
            VideoStart="27200" VideoEnd="52000" Input="Input/combo_3.xml">
     <Start State="Idle">
-      <Var Name="Height" Value="0" />
-      <Var Name="NitroCount" Value="8" />
-      <Var Name="FlashStock" Value="3" />
-      <Var Name="IceStock" Value="3" />
-      <Var Name="FlashCount" Value="2" />   <!-- 다음 투척이 세 번째 → 지상 강화 -->
-      <Var Name="IceCount" Value="2" />
+      <Variable Name="Height" Value="0" />
+      <Variable Name="NitroStock" Value="8" />
+      <Variable Name="FlashStock" Value="3" />
+      <Variable Name="IceStock" Value="3" />
+      <Variable Name="FlashCount" Value="2" />   <!-- 다음 투척이 세 번째 → 지상 강화 -->
+      <Variable Name="IceCount" Value="2" />
     </Start>
     <Mark Time="0"     State="Idle" />
     <Mark Time="2460"  State="Flash_Ground" />   <!-- 강화 -->
@@ -103,13 +103,13 @@
   <Segment Name="연계 4 오픈 파이어" Order="4" Combo="combo_4" Video="main"
            VideoStart="52000" VideoEnd="58500" Input="Input/combo_4.xml">
     <Start State="Idle">
-      <Var Name="Height" Value="0" />
-      <Var Name="NitroCount" Value="8" />
-      <Var Name="FlashStock" Value="3" />
-      <Var Name="IceStock" Value="3" />
-      <Var Name="BurstStock" Value="3" />
-      <Var Name="FlashCount" Value="0" />   <!-- 연계 3 강화 후 0 -->
-      <Var Name="IceCount" Value="0" />
+      <Variable Name="Height" Value="0" />
+      <Variable Name="NitroStock" Value="8" />
+      <Variable Name="FlashStock" Value="3" />
+      <Variable Name="IceStock" Value="3" />
+      <Variable Name="BurstStock" Value="3" />
+      <Variable Name="FlashCount" Value="0" />   <!-- 연계 3 강화 후 0 -->
+      <Variable Name="IceCount" Value="0" />
     </Start>
     <Mark Time="0"    State="Idle" />
     <Mark Time="1500" State="Jump" />
@@ -128,14 +128,14 @@
            VideoStart="64000" VideoEnd="72500" Input="Input/combo_5.xml">
     <Setting Skill="@OPENFIRE" VP="1" />
     <Start State="Idle">
-      <Var Name="Height" Value="0" />
-      <Var Name="NitroCount" Value="8" />
-      <Var Name="FlashStock" Value="3" />
-      <Var Name="IceStock" Value="3" />
-      <Var Name="BurstStock" Value="3" />
-      <Var Name="PhotoStock" Value="3" />
-      <Var Name="FlashCount" Value="2" />   <!-- 연계 4에서 2번씩 (오픈 파이어는 카운트 영향 없음). 다음 투척 강화 여부 영상으로 확인 필요 -->
-      <Var Name="IceCount" Value="2" />
+      <Variable Name="Height" Value="0" />
+      <Variable Name="NitroStock" Value="8" />
+      <Variable Name="FlashStock" Value="3" />
+      <Variable Name="IceStock" Value="3" />
+      <Variable Name="BurstStock" Value="3" />
+      <Variable Name="PhotonStock" Value="3" />
+      <Variable Name="FlashCount" Value="2" />   <!-- 연계 4에서 2번씩 (오픈 파이어는 카운트 영향 없음). 다음 투척 강화 여부 영상으로 확인 필요 -->
+      <Variable Name="IceCount" Value="2" />
     </Start>
     <Mark Time="0"    State="Idle" />
     <Mark Time="2000" State="Jump" />
@@ -151,13 +151,13 @@
   <Segment Name="연계 6 스탠바이 레디" Order="6" Combo="combo_6" Video="main"
            VideoStart="72800" VideoEnd="80900" Input="Input/combo_6.xml">
     <Start State="Idle">
-      <Var Name="Height" Value="0" />
-      <Var Name="NitroCount" Value="8" />
-      <Var Name="FlashStock" Value="3" />
-      <Var Name="IceStock" Value="3" />
-      <Var Name="FlashCount" Value="0" />   <!-- TODO: 연계 5까지의 누적값 확인 -->
-      <Var Name="IceCount" Value="0" />
-      <Var Name="StandbyReady_FinishAttack" Value="0" />
+      <Variable Name="Height" Value="0" />
+      <Variable Name="NitroStock" Value="8" />
+      <Variable Name="FlashStock" Value="3" />
+      <Variable Name="IceStock" Value="3" />
+      <Variable Name="FlashCount" Value="0" />   <!-- TODO: 연계 5까지의 누적값 확인 -->
+      <Variable Name="IceCount" Value="0" />
+      <Variable Name="StandbyReady_FinishAttack" Value="0" />
     </Start>
     <Mark Time="0"    State="Idle" />
     <Mark Time="860"  State="Jump" />

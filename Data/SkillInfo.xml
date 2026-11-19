@@ -7,12 +7,12 @@
     MaxError = 모든 레벨에서 위 식과 API 실제 값의 최대 차이 (1 이하면 반올림 차이)
   - CoolTime·CastingTime은 ms. OptionValue는 API 원본 단위 (OptionDesc의 {valueN} 참고)
   - 사용 레벨은 Segments.xml의 DefaultSetting Level (캐릭터 습득 레벨 + 칭호 스킬 레벨 +1)
-  - BuffKey(BuffInfo 연결)는 BuffInfo 작성 때 채움
+  - BuffKey: BuffInfo.xml의 BuffKey 목록. ActionScript BuffFrame의 BuffIndex가 이 목록의 순번 (0부터)
 -->
 <SkillInfo>
 
   <!-- 프로젝트 전용: 스핏파이어 기본 공격 (API에 없는 항목). 기본 공격 피해는 100% (프레이야는 독립 공격력 캐릭터라 공격력 100과 같음) -->
-  <Skill SkillKey="800" Source="Project" Name="스핏파이어 기본 공격" Type="basic" MaxLevel="1" RequiredLevel="1" RequiredLevelRange="" BuffKey="">
+  <Skill SkillKey="800" Source="Project" Name="스핏파이어 기본 공격" Type="basic" MaxLevel="1" RequiredLevel="1" RequiredLevelRange="" BuffKey="800001">
     <Desc>지상·공중 평타 사격의 기본 피해</Desc>
     <LevelInfo Variant="Base" OptionDesc="공격력 : {value1}%" MaxError="0">
       <Base Value1="100" />
@@ -20,7 +20,7 @@
     </LevelInfo>
   </Skill>
 
-  <Skill SkillKey="801" ApiSkillId="c61f5a010370101402b05b21916c2071" Name="G-35L 섬광류탄" Type="active" MaxLevel="70" RequiredLevel="25" RequiredLevelRange="2" BuffKey="">
+  <Skill SkillKey="801" ApiSkillId="c61f5a010370101402b05b21916c2071" Name="G-35L 섬광류탄" Type="active" MaxLevel="70" RequiredLevel="25" RequiredLevelRange="2" BuffKey="801001, 2001, 801002">
     <Desc>전방으로 섬광류탄을 투척하여 범위내 대상에게 피해를 입히고 감전 상태 이상을 유발한다.&#10;섬광류탄은 최대 장전수와 장전 쿨타임을 가지며 방향키 위/아래 입력후 시전 시 투척 위치를 조절할 수 있다.&#10;결투장에서는 감전효과가 적용되지 않는다.</Desc>
     <DescDetail>전방으로 섬광류탄을 투척하여 범위내 대상에게 피해를 입히고 감전 상태 이상을 유발한다.&#10;섬광류탄은 최대 장전수와 장전 쿨타임을 가지며 방향키 위/아래 입력후 시전 시 투척 위치를 조절할 수 있다.&#10;결투장에서는 감전효과가 적용되지 않는다.</DescDetail>
     <DescSpecial>지상에서 방향키 입력 시 투척 방향 변경</DescSpecial>
@@ -37,7 +37,7 @@
     </Enhancement>
   </Skill>
 
-  <Skill SkillKey="802" ApiSkillId="202edb928046f4fa6dedf6337377efd5" Name="G-18C 빙결류탄" Type="active" MaxLevel="70" RequiredLevel="30" RequiredLevelRange="2" BuffKey="">
+  <Skill SkillKey="802" ApiSkillId="202edb928046f4fa6dedf6337377efd5" Name="G-18C 빙결류탄" Type="active" MaxLevel="70" RequiredLevel="30" RequiredLevelRange="2" BuffKey="802001, 2002, 802002">
     <Desc>전방으로 빙결류탄을 투척하여 범위내 대상에게 피해를 입히고 빙결 상태 이상을 유발한다.&#10;빙결류탄은 최대 장전수와 장전 쿨타임을 가지며 방향키 위/아래 입력후 시전 시 투척 위치를 조절할 수 있다.</Desc>
     <DescDetail>전방으로 빙결류탄을 투척하여 범위내 대상에게 피해를 입히고 빙결 상태 이상을 유발한다.&#10;빙결류탄은 최대 장전수와 장전 쿨타임을 가지며 방향키 위/아래 입력후 시전 시 투척 위치를 조절할 수 있다.</DescDetail>
     <DescSpecial>지상에서 방향키 입력 시 투척 방향 변경&#10;피격된 적 빙결</DescSpecial>
@@ -54,7 +54,7 @@
     </Enhancement>
   </Skill>
 
-  <Skill SkillKey="803" ApiSkillId="de3fea2d65c597f4d55c70a02b97fc79" Name="G-14 파열류탄" Type="active" MaxLevel="70" RequiredLevel="15" RequiredLevelRange="2" BuffKey="">
+  <Skill SkillKey="803" ApiSkillId="de3fea2d65c597f4d55c70a02b97fc79" Name="G-14 파열류탄" Type="active" MaxLevel="70" RequiredLevel="15" RequiredLevelRange="2" BuffKey="803001">
     <Desc>전방으로 파열류탄을 투척하여 범위내 대상에게 피해를 입힌다.&#10;파열류탄은 최대 장전수와 장전 쿨타임을 가지며 방향키 위/아래 입력후 시전 시 투척 위치를 조절할 수 있고 스핏파이어 전직 시 기본 사격을 캔슬하고 투척이 가능하다.</Desc>
     <DescDetail>전방으로 파열류탄을 투척하여 범위내 대상에게 피해를 입힌다.&#10;파열류탄은 최대 장전수와 장전 쿨타임을 가지며 방향키 위/아래 입력후 시전 시 투척 위치를 조절할 수 있고 스핏파이어 전직 시 기본 사격을 캔슬하고 투척이 가능하다.</DescDetail>
     <DescSpecial>지상에서 방향키 입력 시 투척 방향 변경&#10;[스핏파이어 전직 시]&#10;- 기본 공격 중 캔슬하여 사용 가능</DescSpecial>
@@ -71,7 +71,7 @@
     </Enhancement>
   </Skill>
 
-  <Skill SkillKey="804" ApiSkillId="3736fe00a26b0086c23db9a4426a5641" Name="포토빌라이저" Type="active" MaxLevel="50" RequiredLevel="80" RequiredLevelRange="2" BuffKey="">
+  <Skill SkillKey="804" ApiSkillId="3736fe00a26b0086c23db9a4426a5641" Name="포토빌라이저" Type="active" MaxLevel="50" RequiredLevel="80" RequiredLevelRange="2" BuffKey="804001">
     <Desc>공중으로 도약하여 지니고있던 광자류탄을 흩뿌리고 강력한 자성을 지니고 있는 탄환을 지면에 발사한다. 공중에 떠있던 광자류탄들은 탄환이 지면에 닿은 지점으로 이동한 후 폭발을 발생시켜 피해를 준다.</Desc>
     <DescDetail>공중으로 도약하여 지니고있던 광자류탄을 흩뿌리고 강력한 자성을 지니고 있는 탄환을 지면에 발사한다. 공중에 떠있던 광자류탄들은 탄환이 지면에 닿은 지점으로 이동한 후 폭발을 발생시켜 피해를 준다.</DescDetail>
     <DescSpecial></DescSpecial>
@@ -90,7 +90,7 @@
     </Enhancement>
   </Skill>
 
-  <Skill SkillKey="805" ApiSkillId="9ceb0c55f40f1fc0fe0fcc65c8fee3a0" Name="오픈 파이어" Type="active" MaxLevel="50" RequiredLevel="75" RequiredLevelRange="2" BuffKey="">
+  <Skill SkillKey="805" ApiSkillId="9ceb0c55f40f1fc0fe0fcc65c8fee3a0" Name="오픈 파이어" Type="active" MaxLevel="50" RequiredLevel="75" RequiredLevelRange="2" BuffKey="805001">
     <Desc>공중으로 솟구쳐 올라 보유중인 류탄들을 전방으로 한번에 쏟아내어 퍼붓는다.&#10;공중에서도 사용할 수 있다.</Desc>
     <DescDetail>공중으로 솟구쳐 올라 보유중인 류탄들을 전방으로 한번에 쏟아내어 퍼붓는다.&#10;공중에서도 사용할 수 있다.</DescDetail>
     <DescSpecial>제압</DescSpecial>
@@ -109,7 +109,7 @@
     </Enhancement>
   </Skill>
 
-  <Skill SkillKey="806" ApiSkillId="c591d1827cfbe224031c704e21d07932" Name="스탠바이-레디" Type="active" MaxLevel="50" RequiredLevel="95" RequiredLevelRange="2" BuffKey="">
+  <Skill SkillKey="806" ApiSkillId="c591d1827cfbe224031c704e21d07932" Name="스탠바이-레디" Type="active" MaxLevel="50" RequiredLevel="95" RequiredLevelRange="2" BuffKey="806001, 806002">
     <Desc>니트로 모터-02X의 바디 파츠를 장착하여 공중 폭격을 준비한다. 지상 혹은 특정 높이 이하에서 사용 할 경우 점프하여 날아올라 폭격을 가하며, 공중에서 시전할 경우 현재 높이에서 폭격을 개시한다.&#10;일정 시간 동안 니트로 모터의 스택이 감소하지 않고 공중에서 부유하며 공중에서 시전 가능한 스킬을 사용 할 수 있다. &#10;이때 니트로 모터-02X 바디 파츠의 효과로 스킬 시전 시 반동이 사라진다. G-14 파열류탄, G-35L 섬광류탄, G-18C 빙결류탄의 공중 투척 쿨타임이 사라지고 스택이 1이하로 감소되지 않으며 스킬키 입력을 유지할 경우 자동으로 류탄을 투척한다.&#10;&#10;스킬키를 재입력 하거나 지속 시간이 종료될 경우 장착중이던 과부하된 니트로 모터-02X 바디 파츠를 투척하여 강력한 피니쉬 폭발을 발생 시킨다.&#10;&#10;스탠바이-레디 지속 도중에는 데피니트 솔루션 스킬 시전 시 즉시 지상으로 과부하된 니트로 모터-02X 바디 파츠를 낙하시켜 피해를 입힌다. &#10;스탠바이-레디 부유 중 C키 입력 시 전방으로 대시하여 빠르게 이동할 수 있지만 고속 낙하(SPACE)는 사용할 수 없다.</Desc>
     <DescDetail>니트로 모터-02X의 바디 파츠를 장착하여 공중 폭격을 준비한다. 지상 혹은 특정 높이 이하에서 사용 할 경우 점프하여 날아올라 폭격을 가하며, 공중에서 시전할 경우 현재 높이에서 폭격을 개시한다.&#10;일정 시간 동안 니트로 모터의 스택이 감소하지 않고 공중에서 부유하며 공중에서 시전 가능한 스킬을 사용 할 수 있다. &#10;이때 니트로 모터-02X 바디 파츠의 효과로 스킬 시전 시 반동이 사라진다. G-14 파열류탄, G-35L 섬광류탄, G-18C 빙결류탄의 공중 투척 쿨타임이 사라지고 스택이 1이하로 감소되지 않으며 스킬키 입력을 유지할 경우 자동으로 류탄을 투척한다.&#10;&#10;스킬키를 재입력 하거나 지속 시간이 종료될 경우 장착중이던 과부하된 니트로 모터-02X 바디 파츠를 투척하여 강력한 피니쉬 폭발을 발생 시킨다.&#10;&#10;스탠바이-레디 지속 도중에는 데피니트 솔루션 스킬 시전 시 즉시 지상으로 과부하된 니트로 모터-02X 바디 파츠를 낙하시켜 피해를 입힌다. &#10;스탠바이-레디 부유 중 C키 입력 시 전방으로 대시하여 빠르게 이동할 수 있지만 고속 낙하(SPACE)는 사용할 수 없다.</DescDetail>
     <DescSpecial>일부 무적&#10;스킬 지속 도중 다른 스킬 시전 가능&#10;류탄 스택 1이하로 감소되지 않음&#10;이동 속도 증가 및 점프키로 대시 가능&#10;스킬키 재입력 시 피니시 발동</DescSpecial>
@@ -119,7 +119,7 @@
     </LevelInfo>
   </Skill>
 
-  <Skill SkillKey="807" ApiSkillId="4224f9b0b8c7c903e9a1e0f9d9f6d04d" Name="니트로 모터" Type="passive" MaxLevel="20" RequiredLevel="15" RequiredLevelRange="1" BuffKey="">
+  <Skill SkillKey="807" ApiSkillId="4224f9b0b8c7c903e9a1e0f9d9f6d04d" Name="니트로 모터" Type="passive" MaxLevel="20" RequiredLevel="15" RequiredLevelRange="1" BuffKey="807001, 807002">
     <Desc>허리에 장착한 니트로 모터를 자세 제어에 활용함으로써 공중에서 이동 및 스킬 사용이 가능해지고 탄 버프를 활용한 사격 공격력과 사격 스킬 공격력이 증가한다.&#10;[사격 스킬]&#10;교차사격, 버스터 샷, 네이팜 탄, 초진공탄 : 첼리&#10; &#10;기본 공격 중 캔슬하여 점프할 수 있게 되며, 공중 사격 스킬이 쿨타임 5초/지속 시간 무제한/즉시 시전 스킬로 변경된다.&#10;습득 시 공중에서 Y축 이동 속도가 상승하며 공중 사격 레벨이 증가한다.&#10;[사용 가능한 액션]&#10;- 수직 상승 : 체공 중 수직으로 상승한다.&#10;공중에서 C&#10;- 수평 이동 : 체공 좌/우 방향으로 이동한다.&#10;공중에서 ← (or → ) + C&#10;- 고속 낙하 : 체공 중 빠르게 착지한다.&#10;공중에서 Space&#10;- 자세 회복 : 피격 상태에서 자세를 회복한다.&#10;피격 상태에서 C&#10;- 스킬 사용 : 체공 중 스킬을 사용한다.</Desc>
     <DescDetail>허리에 장착한 니트로 모터를 자세 제어에 활용함으로써 공중에서 이동 및 스킬 사용이 가능해지고 탄 버프를 활용한 사격 공격력과 사격 스킬 공격력이 증가한다.&#10;[사격 스킬]&#10;교차사격, 버스터 샷, 네이팜 탄, 초진공탄 : 첼리&#10; &#10;기본 공격 중 캔슬하여 점프할 수 있게 되며, 공중 사격 스킬이 쿨타임 5초/지속 시간 무제한/즉시 시전 스킬로 변경된다.&#10;습득 시 공중에서 Y축 이동 속도가 상승하며 공중 사격 레벨이 증가한다.&#10;[사용 가능한 액션]&#10;- 수직 상승 : 체공 중 수직으로 상승한다.&#10;공중에서 C&#10;- 수평 이동 : 체공 좌/우 방향으로 이동한다.&#10;공중에서 ← (or → ) + C&#10;- 고속 낙하 : 체공 중 빠르게 착지한다.&#10;공중에서 Space&#10;- 자세 회복 : 피격 상태에서 자세를 회복한다.&#10;피격 상태에서 C&#10;- 스킬 사용 : 체공 중 스킬을 사용한다.</DescDetail>
     <DescSpecial>기본 공격 중 캔슬하여 점프 가능&#10;공중에서 스킬 시전 가능&#10;공중에서 점프키 입력 시 공중 기동&#10;공중에서 SPACE 입력 시 공중 낙하&#10;공중에서 Y축 이동속도 증가 및 공중 사격 스킬 레벨 증가</DescSpecial>
@@ -129,7 +129,7 @@
     </LevelInfo>
   </Skill>
 
-  <Skill SkillKey="808" ApiSkillId="34e1bda921012f6018709f1c1a12b04d" Name="니트로 모터-02X" Type="passive" MaxLevel="50" RequiredLevel="95" RequiredLevelRange="3" BuffKey="">
+  <Skill SkillKey="808" ApiSkillId="34e1bda921012f6018709f1c1a12b04d" Name="니트로 모터-02X" Type="passive" MaxLevel="50" RequiredLevel="95" RequiredLevelRange="3" BuffKey="808001">
     <Desc>천계 기술력이 집결된 니트로 모터-02X를 하사받은 진(眞) 스핏파이어는 한층 높은 기동력으로 적들을 폭격할 수 있게 되어 니트로 모터의 공중 액션 사용 횟수가 1회 증가하고 기본 공격 및 전직 계열 스킬 공격력이 증가하며 일부 스킬에 부가 효과가 부여된다.&#10;&#10;[M18 클레이모어] : 탄두가 포함된 원반 M18 클레이모어를 투척하도록 변경되고 지면에 떨어진 클레이모어는 적을 감지하여 자동으로 폭발하며 스킬키 재입력으로 즉시 폭발 시킬 수 있다. 폭발 시 넉백 거리가 감소한다.&#10;&#10;[유탄 마스터리] : 유탄 마스터리 스킬의 공격력 증가율이 상승하고 G-14 파열류탄, G-35L 섬광류탄, G-18C 빙결류탄 중 같은 계열의 류탄을 2회 투척 했을 때 그 다음 던지는 해당 계열 류탄을 강화하여 더 강한 피해를 입힌다.</Desc>
     <DescDetail>천계 기술력이 집결된 니트로 모터-02X를 하사받은 진(眞) 스핏파이어는 한층 높은 기동력으로 적들을 폭격할 수 있게 되어 니트로 모터의 공중 액션 사용 횟수가 1회 증가하고 기본 공격 및 전직 계열 스킬 공격력이 증가하며 일부 스킬에 부가 효과가 부여된다.&#10;&#10;[M18 클레이모어] : 탄두가 포함된 원반 M18 클레이모어를 투척하도록 변경되고 지면에 떨어진 클레이모어는 적을 감지하여 자동으로 폭발하며 스킬키 재입력으로 즉시 폭발 시킬 수 있다. 폭발 시 넉백 거리가 감소한다.&#10;&#10;[유탄 마스터리] : 유탄 마스터리 스킬의 공격력 증가율이 상승하고 G-14 파열류탄, G-35L 섬광류탄, G-18C 빙결류탄 중 같은 계열의 류탄을 2회 투척 했을 때 그 다음 던지는 해당 계열 류탄을 강화하여 더 강한 피해를 입힌다.</DescDetail>
     <DescSpecial></DescSpecial>
@@ -139,7 +139,7 @@
     </LevelInfo>
   </Skill>
 
-  <Skill SkillKey="809" ApiSkillId="3c5604bdbb0240b8f130f59ab40509c3" Name="폭발탄" Type="active" MaxLevel="20" RequiredLevel="30" RequiredLevelRange="3" BuffKey="">
+  <Skill SkillKey="809" ApiSkillId="3c5604bdbb0240b8f130f59ab40509c3" Name="폭발탄" Type="active" MaxLevel="20" RequiredLevel="30" RequiredLevelRange="3" BuffKey="809001, 809002">
     <Desc>탄두에 폭발성 탄심을 삽입하여 기본 사격 최초 착탄시 폭발을 유발한다.&#10;오버 차지 상태에서 사용 가능하고 사격의 속성은 오버 차지에서 선택한 속성을 따르며 특성탄/관통탄과 동시에 시전할 수 없다.&#10;해당 스킬은 장비의 영향을 실시간으로 받는다.&#10;결투장에서는 별도의 지속 시간이 존재한다.</Desc>
     <DescDetail>탄두에 폭발성 탄심을 삽입하여 기본 사격 최초 착탄시 폭발을 유발한다.&#10;오버 차지 상태에서 사용 가능하고 사격의 속성은 오버 차지에서 선택한 속성을 따르며 특성탄/관통탄과 동시에 시전할 수 없다.&#10;해당 스킬은 장비의 영향을 실시간으로 받는다.&#10;결투장에서는 별도의 지속 시간이 존재한다.</DescDetail>
     <DescSpecial></DescSpecial>
@@ -149,7 +149,7 @@
     </LevelInfo>
   </Skill>
 
-  <Skill SkillKey="810" ApiSkillId="d0cdaca82892e54097f22a1f60817048" Name="관통탄" Type="active" MaxLevel="20" RequiredLevel="30" RequiredLevelRange="3" BuffKey="">
+  <Skill SkillKey="810" ApiSkillId="d0cdaca82892e54097f22a1f60817048" Name="관통탄" Type="active" MaxLevel="20" RequiredLevel="30" RequiredLevelRange="3" BuffKey="810001, 810002">
     <Desc>탄두에 관통 피갑을 입혀 기본 사격의 공격력/관통력/사거리/탄속을 증폭 시킨다.&#10;오버 차지 상태에서 사용 가능하고 사격의 속성은 오버 차지에서 선택한 속성을 따르며 특성탄/폭발탄과 동시에 시전할 수 없다.&#10;해당 스킬은 장비의 영향을 실시간으로 받는다.&#10;결투장에서는 별도의 지속 시간이 존재한다.</Desc>
     <DescDetail>탄두에 관통 피갑을 입혀 기본 사격의 공격력/관통력/사거리/탄속을 증폭 시킨다.&#10;오버 차지 상태에서 사용 가능하고 사격의 속성은 오버 차지에서 선택한 속성을 따르며 특성탄/폭발탄과 동시에 시전할 수 없다.&#10;해당 스킬은 장비의 영향을 실시간으로 받는다.&#10;결투장에서는 별도의 지속 시간이 존재한다.</DescDetail>
     <DescSpecial></DescSpecial>
@@ -159,7 +159,7 @@
     </LevelInfo>
   </Skill>
 
-  <Skill SkillKey="811" ApiSkillId="3fb8395ae3b81bd608e0c4223a8eb534" Name="버스터 샷" Type="active" MaxLevel="70" RequiredLevel="35" RequiredLevelRange="2" BuffKey="">
+  <Skill SkillKey="811" ApiSkillId="3fb8395ae3b81bd608e0c4223a8eb534" Name="버스터 샷" Type="active" MaxLevel="70" RequiredLevel="35" RequiredLevelRange="2" BuffKey="811001">
     <Desc>전방 좁은 범위에 집중된 사격을 가하여 피해를 입힌다.&#10;오버 차지 상태에서 사용 가능하고 사격의 속성은 오버 차지에서 선택한 속성을 따른다.</Desc>
     <DescDetail>전방 좁은 범위에 집중된 사격을 가하여 피해를 입힌다.&#10;오버 차지 상태에서 사용 가능하고 사격의 속성은 오버 차지에서 선택한 속성을 따른다.</DescDetail>
     <DescSpecial>무적</DescSpecial>
@@ -178,7 +178,7 @@
     </Enhancement>
   </Skill>
 
-  <Skill SkillKey="812" ApiSkillId="5a56514f35cf0270ae8d6c65f8fefd78" Name="기본기 숙련" Type="passive" MaxLevel="200" RequiredLevel="1" RequiredLevelRange="1" BuffKey="">
+  <Skill SkillKey="812" ApiSkillId="5a56514f35cf0270ae8d6c65f8fefd78" Name="기본기 숙련" Type="passive" MaxLevel="200" RequiredLevel="1" RequiredLevelRange="1" BuffKey="812001">
     <Desc>기본 공격, 대시 공격, 점프 공격, 마릴린 로즈 스킬의 공격력을 증가 시킨다.&#10;결투장에서는 버프/패시브 스킬의 스킬 공격력 증가 효과가 기본기 숙련에 영향을 주지 않는다.</Desc>
     <DescDetail>기본 공격, 대시 공격, 점프 공격, 마릴린 로즈 스킬의 공격력을 증가 시킨다.&#10;결투장에서는 버프/패시브 스킬의 스킬 공격력 증가 효과가 기본기 숙련에 영향을 주지 않는다.</DescDetail>
     <DescSpecial>[결투장]&#10;- 버프/패시브의 공격력 증가 미적용</DescSpecial>
@@ -190,7 +190,7 @@
     </LevelInfo>
   </Skill>
 
-  <Skill SkillKey="813" ApiSkillId="bb34e8854a93fd250347a1c64119f7ab" Name="공중사격" Type="active" MaxLevel="20" RequiredLevel="15" RequiredLevelRange="3" BuffKey="">
+  <Skill SkillKey="813" ApiSkillId="bb34e8854a93fd250347a1c64119f7ab" Name="공중사격" Type="active" MaxLevel="20" RequiredLevel="15" RequiredLevelRange="3" BuffKey="813001">
     <Desc>발동 후 일정 시간 동안 공중에서 사격할 때 약간씩 제자리에 머물러, 원하는 적을 더 정확히 노릴 수 있게 되며, 공중 사격의 공격력과 최대 발사 수가 증가한다.&#10;병기강화 스킬을 습득한 경우 던전 입장 및 부활 시 자동으로 시전된다.</Desc>
     <DescDetail>발동 후 일정 시간 동안 공중에서 사격할 때 약간씩 제자리에 머물러, 원하는 적을 더 정확히 노릴 수 있게 되며, 공중 사격의 공격력과 최대 발사 수가 증가한다.&#10;병기강화 스킬을 습득한 경우 던전 입장 및 부활 시 자동으로 시전된다.</DescDetail>
     <DescSpecial></DescSpecial>
@@ -200,7 +200,7 @@
     </LevelInfo>
   </Skill>
 
-  <Skill SkillKey="814" ApiSkillId="0113c8b1306ca76d208f83f2d093dd62" Name="유탄 마스터리" Type="passive" MaxLevel="20" RequiredLevel="20" RequiredLevelRange="3" BuffKey="">
+  <Skill SkillKey="814" ApiSkillId="0113c8b1306ca76d208f83f2d093dd62" Name="유탄 마스터리" Type="passive" MaxLevel="20" RequiredLevel="20" RequiredLevelRange="3" BuffKey="814001">
     <Desc>G-14 파열류탄, G-35L 섬광류탄, G-18C 빙결류탄의 공격력이 증가한다.</Desc>
     <DescDetail>G-14 파열류탄, G-35L 섬광류탄, G-18C 빙결류탄의 공격력이 증가한다.</DescDetail>
     <DescSpecial>[니트로 모터-02X 습득 시]&#10;- G-14 파열류탄, G-35L 섬광류탄, G-18C 빙결류탄 중 같은 계열의 류탄을 2회 투척 했을 때 그 다음 던지는 해당 계열 류탄을 강화</DescSpecial>

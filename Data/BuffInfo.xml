@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  DNF_ScriptViewer - 스핏파이어(여) BuffInfo (2026-11-19)
+  - 데이터 링크: ActionScript BuffFrame(SkillKey, BuffIndex) → SkillInfo의 BuffKey 목록 중 BuffIndex번째 → 여기 Buff
+  - 수치 원본은 SkillInfo 하나. 여기서는 값을 다시 적지 않고 getSkillValue(스킬 키, N) = 사용 레벨의 {valueN}으로 참조
+    (사용 레벨은 Segments DefaultSetting Level, 증가량이 일정하지 않은 스킬은 SkillInfo의 Row 값 사용)
+  - 패시브 공격력 증가(BuffEdit)는 데미지 계산에 반영 (액션 차트에는 영향 없음). 스킬 강화(Enhancement)는 적용하지 않음
+  - BuffKey: 스킬 키 × 1000 + 순번 (Ex. 801001). 공용 상태 이상은 2000번대 (레퍼런스와 같은 방식)
+
+  [속성]
+  BuffKey : 버프 키
+  BuffName : 버프 이름
+  BuffType : Attack(공격 피해) | Debuff(상태 이상) | State(지속 상태, CheckBuff로 확인) | BuffEdit(다른 버프의 공격력 변경)
+  BuffGroup : 같은 종류 구분용 Flag. 같은 그룹은 동시에 적용되지 않음 (폭발탄·관통탄 동시 사용 불가 등)
+  SkillKey : 수치를 가져오는 스킬 (공용 상태 이상은 비움)
+  Remain : 지속 시간 (ms, 식 가능). 비어 있으면 즉시 적용(공격) 또는 무제한(패시브)
+  StackType : None(중복 불가, 기존 유지) | Refresh(다시 걸리면 시간 갱신) | Stack(중첩)
+  Desc : 설명 ({ParamN}, {Remain} 치환)
+  Param01~ : 타입별 파라미터 (식 가능)
+    Attack   : Param01 = 공격력(%)
+    Debuff   : Param01 = 상태 이상 종류, Param02~ = 수치
+    State    : Param01 = 상태 이름
+    BuffEdit : Param01 = 대상 BuffKey 목록(", " 구분), Param02 = 공격력 증가율(%)
+
+  [BuffGroup]
+  1 : 타격
+  5 : 상태 이상
+  10 : 탄 버프 (폭발탄·관통탄, 동시 적용 불가)
+  20 : 패시브 공격력 증가
+
+  [레퍼런스와 다른 점]
+  - BuffParam에 숫자를 직접 적지 않음 (1:1,000,000 비율 표기 대신 SkillInfo 값 참조, 원본 1개 규칙)
+  - MaxLevel 없음 (레벨은 스킬을 따라감), BuffIcon·isVisible 없음 (툴에서 그리지 않음)
+-->
+<BuffInfo>
+
+  <!-- ===================== 공용 상태 이상 ===================== -->
+
+  <!-- 섬광류탄 1번. 감전 피해(대상 감전 스택에 따라 후속 타격에 추가 피해)의 계산 반영 여부는 미정. 강화 류탄 지속 공격 매 틱마다 다시 걸림 (ActionScript 주석: 매 틱 감전 갱신, 스택 추가) -->
+  <Buff BuffKey="2001" BuffName="감전" BuffType="Debuff" BuffGroup="5" SkillKey="801" Remain="getSkillValue(801, 4) * 1000" StackType="Stack"
+        Desc="{Remain}초간 감전. 감전 공격력 {Param02}"
+        Param01="Shock" Param02="getSkillValue(801, 3)" />
+
+  <!-- 빙결류탄 1번 -->
+  <Buff BuffKey="2002" BuffName="빙결" BuffType="Debuff" BuffGroup="5" SkillKey="802" Remain="getSkillValue(802, 4) * 1000" StackType="Refresh"
+        Desc="{Param02}% 확률로 {Remain}초간 빙결"
+        Param01="Freeze" Param02="getSkillValue(802, 3)" />
+
+  <!-- ===================== 기본 공격 ===================== -->
+
+  <Buff BuffKey="800001" BuffName="스핏파이어 기본 공격" BuffType="Attack" BuffGroup="1" SkillKey="800" Remain="" StackType="None"
+        Desc="공격력 {Param01}%"
+        Param01="getSkillValue(800, 1)" />
+
+  <!-- ===================== 류탄 ===================== -->
+
+  <Buff BuffKey="801001" BuffName="섬광류탄 폭발" BuffType="Attack" BuffGroup="1" SkillKey="801" Remain="" StackType="None"
+        Desc="폭발 공격력 {Param01}%"
+        Param01="getSkillValue(801, 2)" />
+  <!-- 강화 류탄: 니트로 모터-02X Value3 = "류탄 공격력의 120%"를 지속 공격 6틱(3초/0.5초)에 나눠 적용 (사용자 확인) -->
+  <Buff BuffKey="801002" BuffName="강화 섬광류탄 지속 공격" BuffType="Attack" BuffGroup="1" SkillKey="801" Remain="" StackType="None"
+        Desc="틱당 공격력 {Param01}% (류탄 공격력의 120%를 6틱에 분할)"
+        Param01="getSkillValue(801, 2) * getSkillValue(808, 3) / 100 / 6" />
+
+  <Buff BuffKey="802001" BuffName="빙결류탄 폭발" BuffType="Attack" BuffGroup="1" SkillKey="802" Remain="" StackType="None"
+        Desc="폭발 공격력 {Param01}%"
+        Param01="getSkillValue(802, 2)" />
+  <Buff BuffKey="802002" BuffName="강화 빙결류탄 지속 공격" BuffType="Attack" BuffGroup="1" SkillKey="802" Remain="" StackType="None"
+        Desc="틱당 공격력 {Param01}% (류탄 공격력의 120%를 6틱에 분할)"
+        Param01="getSkillValue(802, 2) * getSkillValue(808, 3) / 100 / 6" />
+
+  <!-- 오픈 파이어 VP1 투척 전용 (단독 액션 없음) -->
+  <Buff BuffKey="803001" BuffName="파열류탄 폭발" BuffType="Attack" BuffGroup="1" SkillKey="803" Remain="" StackType="None"
+        Desc="폭발 공격력 {Param01}%"
+        Param01="getSkillValue(803, 2)" />
+
+  <!-- 오픈 파이어 VP1 투척 전용 (포토빌라이저 VP2 포톤 스플래쉬). 1회 공격력 = 기본 총 공격력(Value1 × Value2)의 34% (66% 감소, 사용자 확인) -->
+  <Buff BuffKey="804001" BuffName="포톤 스플래쉬 광자류탄 폭발" BuffType="Attack" BuffGroup="1" SkillKey="804" Remain="" StackType="None"
+        Desc="1회 공격력 {Param01}%"
+        Param01="getSkillValue(804, 1) * getSkillValue(804, 2) * 0.34" />
+
+  <!-- ===================== 오픈 파이어 ===================== -->
+
+  <!-- BuffIndex 0을 200ms 간격 6번 (Value2 = 6) -->
+  <Buff BuffKey="805001" BuffName="오픈 파이어 폭발" BuffType="Attack" BuffGroup="1" SkillKey="805" Remain="" StackType="None"
+        Desc="폭발 공격력 {Param01}% (총 {Param02}회)"
+        Param01="getSkillValue(805, 1)" Param02="getSkillValue(805, 2)" />
+
+  <!-- ===================== 스탠바이-레디 ===================== -->
+
+  <Buff BuffKey="806001" BuffName="스탠바이-레디 피니시 폭발" BuffType="Attack" BuffGroup="1" SkillKey="806" Remain="" StackType="None"
+        Desc="피니시 폭발 공격력 {Param01}%"
+        Param01="getSkillValue(806, 2)" />
+  <!-- @STANDBY_BUFF. 지속 시간 동안 체공·류탄 스택 유지, 끝나면 피니시로 -->
+  <Buff BuffKey="806002" BuffName="스탠바이-레디 지속" BuffType="State" BuffGroup="" SkillKey="806" Remain="getSkillValue(806, 1) * 1000" StackType="None"
+        Desc="{Remain}초간 공중 폭격 상태"
+        Param01="StandbyReady" />
+
+  <!-- ===================== 탄 버프 (시연 미사용, 평타 분기용) ===================== -->
+
+  <Buff BuffKey="809001" BuffName="폭발탄 폭발" BuffType="Attack" BuffGroup="1" SkillKey="809" Remain="" StackType="None"
+        Desc="폭발 공격력 {Param01}%"
+        Param01="getSkillValue(809, 1)" />
+  <!-- @EXPLOSIVE_BUFF. API 지속 시간 "-" (던전 무제한) -->
+  <Buff BuffKey="809002" BuffName="폭발탄" BuffType="State" BuffGroup="10" SkillKey="809" Remain="" StackType="Refresh"
+        Desc="기본 사격 최초 착탄 시 폭발"
+        Param01="ExplosiveBullet" />
+
+  <Buff BuffKey="810001" BuffName="관통탄 사격" BuffType="Attack" BuffGroup="1" SkillKey="810" Remain="" StackType="None"
+        Desc="공격력 {Param01}%"
+        Param01="getSkillValue(810, 1)" />
+  <!-- @PIERCE_BUFF. 관통력·사거리·탄속 증가는 ActionScript 관통탄 AttackFrame 수치로 반영 -->
+  <Buff BuffKey="810002" BuffName="관통탄" BuffType="State" BuffGroup="10" SkillKey="810" Remain="" StackType="Refresh"
+        Desc="기본 사격 관통력 {Param02}%·사거리 {Param03}%·탄속 {Param04}% 증가"
+        Param01="PierceBullet" Param02="getSkillValue(810, 2)" Param03="getSkillValue(810, 3)" Param04="getSkillValue(810, 4)" />
+
+  <!-- ===================== 버스터 샷 ===================== -->
+
+  <Buff BuffKey="811001" BuffName="버스터 샷 사격" BuffType="Attack" BuffGroup="1" SkillKey="811" Remain="" StackType="None"
+        Desc="공격력 {Param01}%"
+        Param01="getSkillValue(811, 1)" />
+
+  <!-- ===================== 패시브 공격력 증가 (데미지 계산에 반영) ===================== -->
+
+  <!-- 대상 "사격 스킬"(교차사격·버스터 샷·네이팜 탄·초진공탄) 중 이 프로젝트는 버스터 샷만. 탄 버프 증가율(Value1)은 폭발탄·관통탄 -->
+  <Buff BuffKey="807001" BuffName="니트로 모터 사격 스킬 공격력" BuffType="BuffEdit" BuffGroup="20" SkillKey="807" Remain="" StackType="None"
+        Desc="사격 스킬 공격력 {Param02}% 증가"
+        Param01="811001" Param02="getSkillValue(807, 2)" />
+  <Buff BuffKey="807002" BuffName="니트로 모터 탄 버프 공격력" BuffType="BuffEdit" BuffGroup="20" SkillKey="807" Remain="" StackType="None"
+        Desc="탄 버프 공격력 {Param02}% 증가"
+        Param01="809001, 810001" Param02="getSkillValue(807, 1)" />
+
+  <!-- "기본 공격 및 전직 계열 스킬" = 이 프로젝트의 모든 공격 (15레벨 전 스킬은 다루지 않음, 사용자 확인) -->
+  <Buff BuffKey="808001" BuffName="니트로 모터-02X 공격력" BuffType="BuffEdit" BuffGroup="20" SkillKey="808" Remain="" StackType="None"
+        Desc="기본 공격 및 전직 계열 스킬 공격력 {Param02}% 증가"
+        Param01="800001, 801001, 801002, 802001, 802002, 803001, 804001, 805001, 806001, 811001" Param02="getSkillValue(808, 1)" />
+
+  <!-- 공중 평타는 점프 공격(Value3)이지만 기본 공격(Value1)·대시(Value2)·점프 증가량이 모든 레벨에서 같아 Value1 하나로 적용 -->
+  <Buff BuffKey="812001" BuffName="기본기 숙련" BuffType="BuffEdit" BuffGroup="20" SkillKey="812" Remain="" StackType="None"
+        Desc="기본 공격력 {Param02}%로 변화"
+        Param01="800001" Param02="getSkillValue(812, 1) - 100" />
+
+  <Buff BuffKey="813001" BuffName="공중사격 공격력" BuffType="BuffEdit" BuffGroup="20" SkillKey="813" Remain="" StackType="None"
+        Desc="공중 사격 공격력 {Param02}% 증가"
+        Param01="800001" Param02="getSkillValue(813, 2)" />
+
+  <!-- 니트로 모터-02X 습득 시 Value2만큼 추가 증가 (02X Value2) -->
+  <Buff BuffKey="814001" BuffName="유탄 마스터리" BuffType="BuffEdit" BuffGroup="20" SkillKey="814" Remain="" StackType="None"
+        Desc="류탄 공격력 {Param02}% 증가"
+        Param01="801001, 801002, 802001, 802002, 803001" Param02="getSkillValue(814, 1) + (SkillLearned(808) ? getSkillValue(808, 2) : 0)" />
+
+</BuffInfo>

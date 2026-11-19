@@ -5,7 +5,7 @@
   - VideoStart / VideoEnd: 영상 시작 기준 ms
   - Mark Time: 구간 시작(VideoStart) 기준 ms, 상태 변경만 기록
   - DefaultSetting: 모든 구간에 적용. 구간의 Setting이 있으면 그쪽이 우선. 적지 않은 스킬은 VP 0
-  - 임시 토큰(@FLASH 등)은 ActionScript.xml 맨 위 목록과 같음
+  - Skill은 SkillInfo.xml의 SkillKey
 
   [주의] 아래 Mark는 6~20fps로 본 대략값 (±50~170ms). 최종본 영상이 오면 60fps로 다시 측정
   [주의] 류탄 보유 스택(*Stock) 시작값은 영상에서 읽지 못해 임시로 3. 측정 필요
@@ -14,8 +14,22 @@
 
   <Video Id="main" Source="youtube:{ID}" />
 
-  <!-- 모든 구간 공통 세팅 (끄는 일이 없는 스킬) -->
-  <DefaultSetting Skill="@PHOTO" VP="1" />
+  <!-- 모든 구간 공통 세팅 -->
+  <!-- Level = 시연 캐릭터의 습득 스킬 레벨(네오플 API 캐릭터 스킬 조회) + 칭호의 1~100레벨 스킬 +1. 미습득 스킬(관통탄)은 적지 않음 -->
+  <!-- VP는 끄는 일이 없는 스킬만 여기에, 구간마다 바뀌는 VP(오픈 파이어)는 구간의 Setting에 -->
+  <DefaultSetting Skill="801" Level="49" />
+  <DefaultSetting Skill="802" Level="47" />
+  <DefaultSetting Skill="803" Level="2" />
+  <DefaultSetting Skill="804" Level="22" VP="1" />
+  <DefaultSetting Skill="805" Level="24" />
+  <DefaultSetting Skill="806" Level="14" />
+  <DefaultSetting Skill="807" Level="11" />
+  <DefaultSetting Skill="808" Level="10" />
+  <DefaultSetting Skill="809" Level="11" />
+  <DefaultSetting Skill="811" Level="44" />
+  <DefaultSetting Skill="812" Level="116" />
+  <DefaultSetting Skill="813" Level="2" />
+  <DefaultSetting Skill="814" Level="11" />
 
   <!-- 연계 1: 지상 평타 7타, 지상 섬광·빙결 한 개씩 -->
   <Segment Name="연계 1 지상 평타·류탄" Order="1" Combo="combo_1" Video="main"
@@ -126,7 +140,7 @@
   <!-- 연계 5: 공중 섬광·빙결 → 오픈 파이어 VP1 (보유 류탄 전부 투척) → 류탄이 없어 착지 -->
   <Segment Name="연계 5 오픈 파이어 VP1" Order="5" Combo="combo_5" Video="main"
            VideoStart="64000" VideoEnd="72500" Input="Input/combo_5.xml">
-    <Setting Skill="@OPENFIRE" VP="1" />
+    <Setting Skill="805" VP="1" />
     <Start State="Idle">
       <Variable Name="Height" Value="0" />
       <Variable Name="NitroStock" Value="8" />

@@ -20,6 +20,7 @@
   @BASIC_ATTACK  스핏파이어 기본 공격 스킬 키
   @EXPLOSIVE     폭발탄 스킬 키        @EXPLOSIVE_BUFF  폭발탄 버프 키
   @PIERCE        관통탄 스킬 키        @PIERCE_BUFF     관통탄 버프 키
+  @BUSTER        버스터 샷 스킬 키
   VP 조건은 SkillLearned(스킬 키 × 100 + VP) → 예: SkillLearned(@OPENFIRE01)
 
   [입력 커맨드] Jump, Attack, Move, Dash, NitroDown, Skill_{스킬 키}
@@ -39,8 +40,17 @@
   [공격] <AttackFrame AttackType TargetType StartTime ... Condition> 안에 <BuffFrame SkillKey BuffIndex /> (데이터 링크: 스킬의 BuffKey 목록 중 몇 번째인지)
   [높이] Height는 물리 없이 구간별 일정 속도로 근사 (점프 +, 하강 -, 공중 평타는 타격마다 감소). 값은 영상 대조 후 조정
   [Loop] LoopCount() = 같은 액션으로 연속 재진입한 횟수 (1타 = 0)
-  [CoolTime] 액션의 CoolTime 속성으로 SkillInfo 쿨타임을 불러옴 (지상·공중 고정값, 스탠바이 투척은 0)
+  [CoolTime] 기본적으로 스킬의 쿨타임 불러오는 함수 사용 (getSkillCoolTime(@SkillKey)) (류탄은 지상·공중 고정값, 스탠바이 투척은 0)
+  * 쿨타임 속성을 적용한 액션 진입과 동시에 쿨타임 시작 (보통 스킬의 가장 첫 액션에서 적용)
+  * 속성에 None 적용 시 비활성화 처리 (차징, 준비 액션 등에서 사용), Continue 적용 시 기존 쿨타임 정보를 따름 (첫 액션에서는 사용 불가)
   [니트로 0] 공중에서 모든 스킬 불가. 공중 평타, 하강(액션 안 이동 가능), 니트로 하강만 가능
+  [BuffFrame] BuffFrame 안에 StartTime을 둔 이유: AttackFrame의 StartTime을 늦게 적용하면 액션에는 진입했는데, AttackFrame 들어가기 전에 강제로 액션이 끊겼을 경우에는 공격하지 않는 경우가 있음. 인게임에서 테스트했을 때 공격이 끊기지 않는다면 0ms에 AttackFrame이 바로 발동한다고 보고, BuffIndex 적용 타이밍을 뒤로 미뤄서 실제 공격 타이밍을 맞춤.
+  [BuffIndex] BuffIndex의 Index값 뒤 () 안에 있는 숫자는 딜레이를 부여. 단위는 ms.
+  * 여러 개는 공백으로 구분 (Ex. BuffIndex="0 1" = 0번·1번 함께 적용, "0(200) 0(400)" = 200ms·400ms에 0번)
+  [AttackType] AttackArrow(투사체: AttackRange 사거리·ArrowSpeed·Piercing) | AttackRange(범위 1회: RangeType Round(AttackRange 반지름·AttackAngle) / Rect(RangeWidth·RangeHeight), Offset) | RepeatAttack(범위 지속: EndTime·RepeatTick)
+  [Move] <Move Speed Direction /> 액션 동안 이동, <Move StartTime Distance Direction /> 그 시점에 Distance(px)만큼 한 번 이동
+  [변수 값] 참거짓은 True / False (Ex. StandbyReady_FinishAttack == True)
+  [초기화 시점] 강화 카운트·류탄 스택처럼 같은 액션 안의 조건이 참조하는 값은 StartTime="Escape"(액션을 나갈 때) 초기화. 0ms에 초기화하면 뒤의 AttackFrame·BuffFrame 조건이 바뀐 값을 봄
 -->
 <ActionScript>
 
@@ -58,7 +68,7 @@
     <Variable Name="FlashCount" Value="0" />                   <!-- 강화 카운트 (종류별, 세 번째마다 강화) -->
     <Variable Name="IceCount" Value="0" />
 
-    <Variable Name="StandbyReady_FinishAttack" Value="0" />    <!-- 스탠바이 레디 피니시 강제 브랜치용 변수 -->
+    <Variable Name="StandbyReady_FinishAttack" Value="False" />    <!-- 스탠바이 레디 피니시 강제 브랜치용 변수 -->
   </CharacterVariables>
 
   <!-- ===================== Func 정의 ===================== -->
@@ -74,18 +84,16 @@
     <Branch ActionName="NitroDown" Condition="NitroDown &amp;&amp; SkillLearned(@NITRO)" />
   </NitroDownBranch_Func>
 
-  <!-- ③ 일반 브랜치: 스탠바이 레디 유도 -->
-  <!-- 버프가 있으면 전용 체공으로, 버프가 끝났으면(지속 시간 종료) 피니시로 -->
-  <StandbyReadyBranch_Func>
-    <Branch ActionName="StandbyReady_Hover" Condition="CheckBuff(@STANDBY_BUFF)" />
-    <Branch ActionName="StandbyReady_Finish" Condition="StandbyReady_FinishAttack >= 1 &amp;&amp; !CheckBuff(@STANDBY_BUFF)" />
-  </StandbyReadyBranch_Func>
+  <!-- ③ 스탠바이 레디 유도 Func는 제거 (2026-11-19): 사용처가 하강·오픈 파이어 두 곳뿐이라 각 액션에 직접 적음 -->
 
   <!-- 지상 공용 브랜치 -->
   <GroundBranch_Func>
     <Branch ActionName="Flash_Ground" Condition="Skill_@FLASH &amp;&amp; FlashStock >= 1" />
     <Branch ActionName="Ice_Ground" Condition="Skill_@ICE &amp;&amp; IceStock >= 1" />
-    <!-- 스탠바이 레디, 오픈파이어 지상 전용 액션 추가 필요 -->
+    <!-- 스탠바이 레디·오픈 파이어는 지상 전용 시전 액션(점프)으로 -->
+    <Branch ActionName="StandbyReady_Jump" Condition="Skill_@STANDBY" />
+    <Branch ActionName="OpenFire_Jump" Condition="Skill_@OPENFIRE" />
+    <Branch ActionName="BusterShot" Condition="Skill_@BUSTER" />
     <Branch ActionName="GroundAttack" Condition="Attack" />
     <Branch ActionName="Jump" Condition="Jump" />
   </GroundBranch_Func>
@@ -104,6 +112,7 @@
     <Branch ActionName="OpenFire" Condition="Skill_@OPENFIRE &amp;&amp; NitroStock >= 1" />
     <Branch ActionName="Flash_Air" Condition="Skill_@FLASH &amp;&amp; FlashStock >= 1 &amp;&amp; NitroStock >= 1" />
     <Branch ActionName="Ice_Air" Condition="Skill_@ICE &amp;&amp; IceStock >= 1 &amp;&amp; NitroStock >= 1" />
+    <Branch ActionName="BusterShot" Condition="Skill_@BUSTER &amp;&amp; NitroStock >= 1" />
     <!-- 공중 평타는 니트로 스택 필요 없음 -->
     <Branch ActionName="AirAttack" Condition="Attack" />
   </AirBranch_Func>
@@ -151,6 +160,9 @@
     <NormalBranch StartTime="0" EndTime="ActionEnd()">
       <Branch ActionName="Flash_Ground" Condition="Skill_@FLASH &amp;&amp; FlashStock >= 1" />
       <Branch ActionName="Ice_Ground" Condition="Skill_@ICE &amp;&amp; IceStock >= 1" />
+      <Branch ActionName="StandbyReady_Jump" Condition="Skill_@STANDBY" />
+      <Branch ActionName="OpenFire_Jump" Condition="Skill_@OPENFIRE" />
+      <Branch ActionName="BusterShot" Condition="Skill_@BUSTER" />
       <Branch ActionName="Jump" Condition="Jump" />
 
       <!-- 대시 상태에서 공격 키 누르면 지상 공격 대신 슬라이딩 해야 하므로, Func 사용 불가 -->
@@ -201,7 +213,9 @@
 
     <NormalBranch StartTime="0" EndTime="ActionEnd()">
       <!-- 기타 공중 공격 액션에서 브랜치하지 못했을 경우를 대비한 보험용 브랜치 -->
-      <StandbyReadyBranch_Func />
+      <!-- 스탠바이 레디 유도: 버프가 있으면 체공으로, 버프가 끝났으면(지속 시간 종료) 피니시로 -->
+      <Branch ActionName="StandbyReady_Hover" Condition="CheckBuff(@STANDBY_BUFF)" />
+      <Branch ActionName="StandbyReady_Finish" Condition="StandbyReady_FinishAttack == True &amp;&amp; !CheckBuff(@STANDBY_BUFF)" />
 
       <AirBranch_Func />
       <NitroDownBranch_Func />
@@ -264,7 +278,7 @@
       <BuffFrame SkillKey="@BASIC_ATTACK" BuffIndex="0" />
       <!-- 적중 시 그 자리에서 폭발하여 새롭게 공격 -->
       <!-- 반지름 길이 80, 중앙각 30의 부채꼴 범위 타격 -->
-      <AttackFrame AttackType="RangeAttack" TargetType="Enemy" StartTime="0" RangeType="Round" AttackRange="80" AttackAngle="30" Offset="0, 0, 0">
+      <AttackFrame AttackType="AttackRange" TargetType="Enemy" StartTime="0" RangeType="Round" AttackRange="80" AttackAngle="30" Offset="0, 0, 0">
         <BuffFrame SkillKey="@EXPLOSIVE" BuffIndex="0" />
       </AttackFrame>
     </AttackFrame>
@@ -292,6 +306,9 @@
     <SuperCancelBranch StartTime="0" EndTime="ActionEnd()">
       <Branch ActionName="Flash_Ground" Condition="Skill_@FLASH &amp;&amp; FlashStock >= 1" />
       <Branch ActionName="Ice_Ground" Condition="Skill_@ICE &amp;&amp; IceStock >= 1" />
+      <Branch ActionName="StandbyReady_Jump" Condition="Skill_@STANDBY" />
+      <Branch ActionName="OpenFire_Jump" Condition="Skill_@OPENFIRE" />
+      <Branch ActionName="BusterShot" Condition="Skill_@BUSTER" />
     </SuperCancelBranch>
   </GroundAttack>
 
@@ -313,7 +330,7 @@
       <BuffFrame SkillKey="@BASIC_ATTACK" BuffIndex="0" />
       <!-- 적중 시 그 자리에서 폭발하여 새롭게 공격 -->
       <!-- 반지름 길이 80, 중앙각 30의 부채꼴 범위 타격 -->
-      <AttackFrame AttackType="RangeAttack" TargetType="Enemy" StartTime="0" RangeType="Round" AttackRange="80" AttackAngle="30" Offset="0, 0, 0">
+      <AttackFrame AttackType="AttackRange" TargetType="Enemy" StartTime="0" RangeType="Round" AttackRange="80" AttackAngle="30" Offset="0, 0, 0">
         <BuffFrame SkillKey="@EXPLOSIVE" BuffIndex="0" />
       </AttackFrame>
     </AttackFrame>
@@ -334,6 +351,9 @@
     <SuperCancelBranch StartTime="0" EndTime="ActionEnd()">
       <Branch ActionName="Flash_Ground" Condition="Skill_@FLASH &amp;&amp; FlashStock >= 1" />
       <Branch ActionName="Ice_Ground" Condition="Skill_@ICE &amp;&amp; IceStock >= 1" />
+      <Branch ActionName="StandbyReady_Jump" Condition="Skill_@STANDBY" />
+      <Branch ActionName="OpenFire_Jump" Condition="Skill_@OPENFIRE" />
+      <Branch ActionName="BusterShot" Condition="Skill_@BUSTER" />
     </SuperCancelBranch>
   </GroundAttack_Finish>
 
@@ -343,14 +363,14 @@
     <!-- 지상 평타 값을 그대로 옮김. 공중 사격(아래 대각선)의 사거리·시작 시각은 측정 후 확인 -->
 
     <!-- 탄 버프 X -->
-    <AttackFrame AttackType="AttackArrow" TargetType="Enemy" StartTime="" AttackRange="800" ArrowSpeed="200" PiercingMaxCount="5" PiercingPercent="60" Condition="!CheckBuff(@EXPLOSIVE_BUFF) &amp;&amp; !CheckBuff(@PIERCE_BUFF)">
+    <AttackFrame AttackType="AttackArrow" TargetType="Enemy" StartTime="1" AttackRange="800" ArrowSpeed="200" PiercingMaxCount="5" PiercingPercent="60" Condition="!CheckBuff(@EXPLOSIVE_BUFF) &amp;&amp; !CheckBuff(@PIERCE_BUFF)">
       <BuffFrame SkillKey="@BASIC_ATTACK" BuffIndex="0" />
     </AttackFrame>
 
     <!-- 폭발탄 -->
     <AttackFrame AttackType="AttackArrow" TargetType="Enemy" StartTime="" AttackRange="800" ArrowSpeed="200" PiercingMaxCount="0" PiercingPercent="0" Condition="CheckBuff(@EXPLOSIVE_BUFF)">
       <BuffFrame SkillKey="@BASIC_ATTACK" BuffIndex="0" />
-      <AttackFrame AttackType="RangeAttack" TargetType="Enemy" StartTime="0" RangeType="Round" AttackRange="80" AttackAngle="30" Offset="0, 0, 0">
+      <AttackFrame AttackType="AttackRange" TargetType="Enemy" StartTime="0" RangeType="Round" AttackRange="80" AttackAngle="30" Offset="0, 0, 0">
         <BuffFrame SkillKey="@EXPLOSIVE" BuffIndex="0" />
       </AttackFrame>
     </AttackFrame>
@@ -362,13 +382,28 @@
 
     <!-- 타격 후 높이 감소 (Value="Height - 감소량") -->
     <Variable Name="Height" StartTime="" Value="" />
+
+    <!-- 사격 반동: 바라보는 반대쪽으로 10px, 위로 5px (이후 중력에 의한 낙하는 구현하지 않음) -->
+    <!-- 스탠바이 레디 버프 보유 중에는 반동 없음 -->
+    <Move StartTime="" Distance="10" Direction="-getPlayerDirection()" Condition="!CheckBuff(@STANDBY_BUFF)" />
+    <Variable Name="Height" StartTime="" Value="Height + 5" Condition="!CheckBuff(@STANDBY_BUFF)" />
+
+    <!-- Loop값과 관계 없이 지상과 가까워지면 강제로 착지 -->
     <ForceLanding_Func />
 
     <!-- 평타가 나가야 브랜치 가능 -->
     <NormalBranch StartTime="" EndTime="ActionEnd()">
       <Branch ActionName="AirAttack" Condition="(Attack || KeyDown) &amp;&amp; LoopCount() &lt; 16" />
-      <StandbyReadyBranch_Func />
+      
+      <!-- 공중 기본 공격 시 마지막 공격 이후에만 스탠바이 레디 피니시가 나가는 스펙 확인하여 Func 제거 -->
+      <!-- <StandbyReadyBranch_Func /> -->
+
+      <!-- Loop값 조건 추가하여, 마지막 공격에서만 강제 브랜치되도록 적용 -->
+      <Branch ActionName="StandbyReady_Finish" Condition="StandbyReady_FinishAttack == True &amp;&amp; !CheckBuff(@STANDBY_BUFF) &amp;&amp; LoopCount() >= 16" />
+
       <NitroDownBranch_Func />
+      <!-- 스탠바이 레디 버프 중이면 공중 평타가 끝난 뒤 체공으로 -->
+      <Branch ActionName="StandbyReady_Hover" Condition="ActionEnd() &amp;&amp; CheckBuff(@STANDBY_BUFF)" />
       <!-- ActionEnd() 조건의 브랜치는 반드시 Normal에 있어야 함 -->
       <Branch ActionName="Down" Condition="ActionEnd()" />
     </NormalBranch>
@@ -380,22 +415,37 @@
       <Branch ActionName="OpenFire" Condition="Skill_@OPENFIRE &amp;&amp; NitroStock >= 1" />
       <Branch ActionName="Flash_Air" Condition="Skill_@FLASH &amp;&amp; FlashStock >= 1 &amp;&amp; NitroStock >= 1" />
       <Branch ActionName="Ice_Air" Condition="Skill_@ICE &amp;&amp; IceStock >= 1 &amp;&amp; NitroStock >= 1" />
+      <Branch ActionName="BusterShot" Condition="Skill_@BUSTER &amp;&amp; NitroStock >= 1" />
     </SuperCancelBranch>
   </AirAttack>
 
   <!-- ===================== 류탄 (6개 액션, 애니는 지상/공중 2개) ===================== -->
 
-  <!-- 섬광 지상: 니트로 소모 0, 이펙트 없음 -->
-  <Flash_Ground SkillKey="@FLASH" CoolTime="" Animation="ani_ground_throw" StartTime="0" EndTime="" ActionSpeedType="" GuardType="None">
+  <!-- 섬광 지상 -->
+  <Flash_Ground SkillKey="@FLASH" CoolTime="3000" Animation="ani_ground_throw" StartTime="0" EndTime="" ActionSpeedType="CastSpeed" GuardType="None">
+    <!-- 류탄 스택 1감소, 강화 카운트 1증가 -->
     <Variable Name="FlashStock" StartTime="0" Value="FlashStock - 1" />
     <Variable Name="FlashCount" StartTime="0" Value="FlashCount + 1" />
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="" Condition="FlashCount != 3">
-      <BuffFrame SkillKey="@FLASH" BuffIndex="" />
+
+    <!-- 강화 공격 시, 강화 카운트 초기화 (액션을 나갈 때. 액션 동안은 카운트 유지 → AttackFrame이 강화 여부를 판정) -->
+    <Variable Name="FlashCount" StartTime="Escape" Value="0" Condition="FlashCount >= 3" />
+
+    <!-- 일반 류탄 원형 범위 공격 -->
+    <!-- 반지름 75px 원형, 투척 이펙트에 맞춰서 전방 150px 오프셋 적용 -->
+    <AttackFrame AttackType="AttackRange" TargetType="Enemy" StartTime="" RangeType="Round" AttackRange="75" AttackAngle="360" Offset="150, 0, 0" Condition="FlashCount &lt; 3">
+      <!-- 류탄 폭발 공격력 (0), 섬광 류탄 감전 공격력 (1) -->
+      <BuffFrame SkillKey="@FLASH" BuffIndex="0 1" />
     </AttackFrame>
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="" Condition="FlashCount == 3">   <!-- 강화 -->
-      <BuffFrame SkillKey="@FLASH" BuffIndex="" />
+
+    <!-- 강화 류탄 사각 범위 공격 -->
+    <!-- 현재 강화 카운트가 3 이상이면 강화 AttackFrame 적용 -->
+    <!-- 밑변 150, 높이 100의 사각형 범위에 3초간 0.5초마다 지속 공격 -->
+    <AttackFrame AttackType="RepeatAttack" TargetType="Enemy" StartTime="" EndTime="3000" RepeatTick="500" RangeType="Rect" RangeWidth="150" RangeHeight="100" Offset="150, 0, 0" Condition="FlashCount >= 3">
+      <!-- 강화 류탄 지속 공격력 (2), 섬광 류탄 감전 공격력 (1) -->
+      <!-- 지속 공격 매 틱마다 감전 갱신하는 점 스펙 (스택 추가) -->
+      <BuffFrame SkillKey="@FLASH" BuffIndex="2 1" />  
     </AttackFrame>
-    <Variable Name="FlashCount" StartTime="" Value="0" Condition="FlashCount == 3" />
+    
     <NormalBranch StartTime="" EndTime="ActionEnd()">
       <GroundBranch_Func />
       <MoveBranch_Func />
@@ -403,38 +453,68 @@
     </NormalBranch>
   </Flash_Ground>
 
-  <!-- 섬광 공중: 니트로 -1, 위쪽 분사 이펙트 (확장 1순위) -->
-  <Flash_Air SkillKey="@FLASH" CoolTime="" Animation="ani_air_throw" StartTime="0" EndTime="" ActionSpeedType="" GuardType="None">
+  <!-- 섬광 공중 -->
+  <Flash_Air SkillKey="@FLASH" CoolTime="500" Animation="ani_air_throw" StartTime="0" EndTime="" ActionSpeedType="CastSpeed" GuardType="None">
+    <!-- 니트로 모터 스택 1 감소, 류탄 스택 1감소, 강화 카운트 1증가 -->
     <Variable Name="NitroStock" StartTime="0" Value="NitroStock - 1" />
     <Variable Name="FlashStock" StartTime="0" Value="FlashStock - 1" />
     <Variable Name="FlashCount" StartTime="0" Value="FlashCount + 1" />
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="" Condition="FlashCount != 3">
-      <BuffFrame SkillKey="@FLASH" BuffIndex="" />
+
+    <!-- 강화 공격 시, 강화 카운트 초기화 (액션을 나갈 때. 액션 동안은 카운트 유지 → AttackFrame이 강화 여부를 판정) -->
+    <Variable Name="FlashCount" StartTime="Escape" Value="0" Condition="FlashCount >= 3" />
+
+    <!-- 일반 류탄 원형 범위 공격 -->
+    <!-- 반지름 75px 원형, 투척 이펙트에 맞춰서 전방 150px 오프셋 적용 -->
+    <AttackFrame AttackType="AttackRange" TargetType="Enemy" StartTime="" RangeType="Round" AttackRange="75" AttackAngle="360" Offset="150, 0, 0" Condition="FlashCount &lt; 3">
+      <!-- 류탄 폭발 공격력 (0), 섬광 류탄 감전 공격력 (1) -->
+      <BuffFrame SkillKey="@FLASH" BuffIndex="0 1" />
     </AttackFrame>
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="" Condition="FlashCount == 3">   <!-- 강화 -->
-      <BuffFrame SkillKey="@FLASH" BuffIndex="" />
+
+    <!-- 강화 류탄 사각 범위 공격 -->
+    <!-- 현재 강화 카운트가 3 이상이면 강화 AttackFrame 적용 -->
+    <!-- 밑변 150, 높이 100의 사각형 범위에 3초간 0.5초마다 지속 공격 -->
+    <AttackFrame AttackType="RepeatAttack" TargetType="Enemy" StartTime="" EndTime="3000" RepeatTick="500" RangeType="Rect" RangeWidth="150" RangeHeight="100" Offset="150, 0, 0" Condition="FlashCount >= 3">
+      <!-- 강화 류탄 지속 공격력 (2), 섬광 류탄 감전 공격력 (1) -->
+      <BuffFrame SkillKey="@FLASH" BuffIndex="2 1" />
     </AttackFrame>
-    <Variable Name="FlashCount" StartTime="" Value="0" Condition="FlashCount == 3" />
-    <ForceLanding_Func />
+
+    
     <NormalBranch StartTime="" EndTime="ActionEnd()">
-      <StandbyReadyBranch_Func />
+      <!-- 액션이 이미 브랜치되었다면, 공격을 마치고 나서 강제 착지 -->
+      <ForceLanding_Func />
+
+      <!-- 스바레 섬광/빙결은 별도 액션이 있으므로 일반 액션에서는 브랜치X -->
+      <!-- <StandbyReadyBranch_Func /> -->
       <NitroDownBranch_Func />
       <AirBranch_Func />
       <Branch ActionName="Down" Condition="ActionEnd()" />
     </NormalBranch>
   </Flash_Air>
 
-  <!-- 빙결 지상 -->
-  <Ice_Ground SkillKey="@ICE" CoolTime="" Animation="ani_ground_throw" StartTime="0" EndTime="" ActionSpeedType="" GuardType="None">
+  <!-- 빙결 지상 (범위는 섬광과 동일) -->
+  <Ice_Ground SkillKey="@ICE" CoolTime="3000" Animation="ani_ground_throw" StartTime="0" EndTime="" ActionSpeedType="CastSpeed" GuardType="None">
+    <!-- 류탄 스택 1감소, 강화 카운트 1증가 -->
     <Variable Name="IceStock" StartTime="0" Value="IceStock - 1" />
     <Variable Name="IceCount" StartTime="0" Value="IceCount + 1" />
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="" Condition="IceCount != 3">
-      <BuffFrame SkillKey="@ICE" BuffIndex="" />
+
+    <!-- 강화 공격 시, 강화 카운트 초기화 (액션을 나갈 때. 액션 동안은 카운트 유지 → AttackFrame이 강화 여부를 판정) -->
+    <Variable Name="IceCount" StartTime="Escape" Value="0" Condition="IceCount >= 3" />
+
+    <!-- 일반 류탄 원형 범위 공격 -->
+    <!-- 반지름 75px 원형, 투척 이펙트에 맞춰서 전방 150px 오프셋 적용 -->
+    <AttackFrame AttackType="AttackRange" TargetType="Enemy" StartTime="" RangeType="Round" AttackRange="75" AttackAngle="360" Offset="150, 0, 0" Condition="IceCount &lt; 3">
+      <!-- 류탄 폭발 공격력 (0), 빙결 류탄 빙결 효과 (1) -->
+      <BuffFrame SkillKey="@ICE" BuffIndex="0 1" />
     </AttackFrame>
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="" Condition="IceCount == 3">   <!-- 강화 -->
-      <BuffFrame SkillKey="@ICE" BuffIndex="" />
+
+    <!-- 강화 류탄 사각 범위 공격 -->
+    <!-- 현재 강화 카운트가 3 이상이면 강화 AttackFrame 적용 -->
+    <!-- 밑변 150, 높이 100의 사각형 범위에 3초간 0.5초마다 지속 공격 -->
+    <AttackFrame AttackType="RepeatAttack" TargetType="Enemy" StartTime="" EndTime="3000" RepeatTick="500" RangeType="Rect" RangeWidth="150" RangeHeight="100" Offset="150, 0, 0" Condition="IceCount >= 3">
+      <!-- 강화 류탄 지속 공격력 (2), 빙결 류탄 빙결 효과 (1) -->
+      <BuffFrame SkillKey="@ICE" BuffIndex="2 1" />
     </AttackFrame>
-    <Variable Name="IceCount" StartTime="" Value="0" Condition="IceCount == 3" />
+
     <NormalBranch StartTime="" EndTime="ActionEnd()">
       <GroundBranch_Func />
       <MoveBranch_Func />
@@ -442,54 +522,97 @@
     </NormalBranch>
   </Ice_Ground>
 
-  <!-- 빙결 공중 -->
-  <Ice_Air SkillKey="@ICE" CoolTime="" Animation="ani_air_throw" StartTime="0" EndTime="" ActionSpeedType="" GuardType="None">
+  <!-- 빙결 공중 (범위는 섬광과 동일) -->
+  <Ice_Air SkillKey="@ICE" CoolTime="500" Animation="ani_air_throw" StartTime="0" EndTime="" ActionSpeedType="CastSpeed" GuardType="None">
+    <!-- 니트로 모터 스택 1 감소, 류탄 스택 1감소, 강화 카운트 1증가 -->
     <Variable Name="NitroStock" StartTime="0" Value="NitroStock - 1" />
     <Variable Name="IceStock" StartTime="0" Value="IceStock - 1" />
     <Variable Name="IceCount" StartTime="0" Value="IceCount + 1" />
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="" Condition="IceCount != 3">
-      <BuffFrame SkillKey="@ICE" BuffIndex="" />
+
+    <!-- 강화 공격 시, 강화 카운트 초기화 (액션을 나갈 때. 액션 동안은 카운트 유지 → AttackFrame이 강화 여부를 판정) -->
+    <Variable Name="IceCount" StartTime="Escape" Value="0" Condition="IceCount >= 3" />
+
+    <!-- 일반 류탄 원형 범위 공격 -->
+    <!-- 반지름 75px 원형, 투척 이펙트에 맞춰서 전방 150px 오프셋 적용 -->
+    <AttackFrame AttackType="AttackRange" TargetType="Enemy" StartTime="" RangeType="Round" AttackRange="75" AttackAngle="360" Offset="150, 0, 0" Condition="IceCount &lt; 3">
+      <!-- 류탄 폭발 공격력 (0), 빙결 류탄 빙결 효과 (1) -->
+      <BuffFrame SkillKey="@ICE" BuffIndex="0 1" />
     </AttackFrame>
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="" Condition="IceCount == 3">   <!-- 강화 -->
-      <BuffFrame SkillKey="@ICE" BuffIndex="" />
+
+    <!-- 강화 류탄 사각 범위 공격 -->
+    <!-- 현재 강화 카운트가 3 이상이면 강화 AttackFrame 적용 -->
+    <!-- 밑변 150, 높이 100의 사각형 범위에 3초간 0.5초마다 지속 공격 -->
+    <AttackFrame AttackType="RepeatAttack" TargetType="Enemy" StartTime="" EndTime="3000" RepeatTick="500" RangeType="Rect" RangeWidth="150" RangeHeight="100" Offset="150, 0, 0" Condition="IceCount >= 3">
+      <!-- 강화 류탄 지속 공격력 (2), 빙결 류탄 빙결 효과 (1) -->
+      <BuffFrame SkillKey="@ICE" BuffIndex="2 1" />
     </AttackFrame>
-    <Variable Name="IceCount" StartTime="" Value="0" Condition="IceCount == 3" />
-    <ForceLanding_Func />
+
     <NormalBranch StartTime="" EndTime="ActionEnd()">
-      <StandbyReadyBranch_Func />
+      <!-- 액션이 이미 브랜치되었다면, 공격을 마치고 나서 강제 착지 -->
+      <ForceLanding_Func />
+
+      <!-- 스바레 섬광/빙결은 별도 액션이 있으므로 일반 액션에서는 브랜치X -->
       <NitroDownBranch_Func />
       <AirBranch_Func />
       <Branch ActionName="Down" Condition="ActionEnd()" />
     </NormalBranch>
   </Ice_Air>
 
-  <!-- 스탠바이 섬광: 기존 공중 투척 액션에서 류탄 스택·니트로 스택 소모 줄을 뺀 전용 액션 -->
-  <!-- 지속 시간 동안 류탄 스택이 1 이하로 내려가지 않음, 쿨타임 0, 강화 카운트는 정상 증가 -->
-  <!-- 버프 종료 시 피니시는 체공 액션(Hover)으로 돌아가서 처리 (StandbyReadyBranch_Func를 부르면 버프가 있는 동안 투척이 바로 끊김) -->
-  <StandbyReady_Flash SkillKey="@FLASH" CoolTime="0" Animation="ani_air_throw" StartTime="0" EndTime="" ActionSpeedType="" GuardType="None">
+  <!-- 스탠바이 섬광 -->
+  <!-- 류탄 스택이 1 이하로 내려가지 않음, 쿨타임 0, 강화 카운트는 정상 증가 -->
+  <StandbyReady_Flash SkillKey="@FLASH" CoolTime="0" Animation="ani_air_throw" StartTime="0" EndTime="" ActionSpeedType="CastSpeed" GuardType="None">
+    <!-- 류탄 스택이 2 이상일 때에만 1감소, 강화 카운트 1증가 -->
+    <Variable Name="FlashStock" StartTime="0" Value="FlashStock - 1" Condition="FlashStock >= 2"/>
     <Variable Name="FlashCount" StartTime="0" Value="FlashCount + 1" />
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="" Condition="FlashCount != 3">
-      <BuffFrame SkillKey="@FLASH" BuffIndex="" />
+
+    <!-- 강화 공격 시, 강화 카운트 초기화 (액션을 나갈 때. 액션 동안은 카운트 유지 → AttackFrame이 강화 여부를 판정) -->
+    <Variable Name="FlashCount" StartTime="Escape" Value="0" Condition="FlashCount >= 3" />
+
+    <!-- 일반 류탄 원형 범위 공격 -->
+    <!-- 반지름 75px 원형, 투척 이펙트에 맞춰서 전방 150px 오프셋 적용 -->
+    <AttackFrame AttackType="AttackRange" TargetType="Enemy" StartTime="" RangeType="Round" AttackRange="75" AttackAngle="360" Offset="150, 0, 0" Condition="FlashCount &lt; 3">
+      <!-- 류탄 폭발 공격력 (0), 섬광 류탄 감전 공격력 (1) -->
+      <BuffFrame SkillKey="@FLASH" BuffIndex="0 1" />
     </AttackFrame>
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="" Condition="FlashCount == 3">   <!-- 강화 -->
-      <BuffFrame SkillKey="@FLASH" BuffIndex="" />
+
+    <!-- 강화 류탄 사각 범위 공격 -->
+    <!-- 현재 강화 카운트가 3 이상이면 강화 AttackFrame 적용 -->
+    <!-- 밑변 150, 높이 100의 사각형 범위에 3초간 0.5초마다 지속 공격 -->
+    <AttackFrame AttackType="RepeatAttack" TargetType="Enemy" StartTime="" EndTime="3000" RepeatTick="500" RangeType="Rect" RangeWidth="150" RangeHeight="100" Offset="150, 0, 0" Condition="FlashCount >= 3">
+      <!-- 강화 류탄 지속 공격력 (2), 섬광 류탄 감전 공격력 (1) -->
+      <BuffFrame SkillKey="@FLASH" BuffIndex="2 1" />
     </AttackFrame>
-    <Variable Name="FlashCount" StartTime="" Value="0" Condition="FlashCount == 3" />
+    
     <NormalBranch StartTime="" EndTime="ActionEnd()">
       <Branch ActionName="StandbyReady_Hover" Condition="ActionEnd()" />
     </NormalBranch>
   </StandbyReady_Flash>
 
   <!-- 스탠바이 빙결 -->
-  <StandbyReady_Ice SkillKey="@ICE" CoolTime="0" Animation="ani_air_throw" StartTime="0" EndTime="" ActionSpeedType="" GuardType="None">
+  <!-- 류탄 스택이 1 이하로 내려가지 않음, 쿨타임 0, 강화 카운트는 정상 증가 -->
+  <StandbyReady_Ice SkillKey="@ICE" CoolTime="0" Animation="ani_air_throw" StartTime="0" EndTime="" ActionSpeedType="CastSpeed" GuardType="None">
+    <!-- 류탄 스택이 2 이상일 때에만 1감소, 강화 카운트 1증가 -->
+    <Variable Name="IceStock" StartTime="0" Value="IceStock - 1" Condition="IceStock >= 2"/>
     <Variable Name="IceCount" StartTime="0" Value="IceCount + 1" />
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="" Condition="IceCount != 3">
-      <BuffFrame SkillKey="@ICE" BuffIndex="" />
+
+    <!-- 강화 공격 시, 강화 카운트 초기화 (액션을 나갈 때. 액션 동안은 카운트 유지 → AttackFrame이 강화 여부를 판정) -->
+    <Variable Name="IceCount" StartTime="Escape" Value="0" Condition="IceCount >= 3" />
+
+    <!-- 일반 류탄 원형 범위 공격 -->
+    <!-- 반지름 75px 원형, 투척 이펙트에 맞춰서 전방 150px 오프셋 적용 -->
+    <AttackFrame AttackType="AttackRange" TargetType="Enemy" StartTime="" RangeType="Round" AttackRange="75" AttackAngle="360" Offset="150, 0, 0" Condition="IceCount &lt; 3">
+      <!-- 류탄 폭발 공격력 (0), 빙결 류탄 빙결 효과 (1) -->
+      <BuffFrame SkillKey="@ICE" BuffIndex="0 1" />
     </AttackFrame>
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="" Condition="IceCount == 3">   <!-- 강화 -->
-      <BuffFrame SkillKey="@ICE" BuffIndex="" />
+
+    <!-- 강화 류탄 사각 범위 공격 -->
+    <!-- 현재 강화 카운트가 3 이상이면 강화 AttackFrame 적용 -->
+    <!-- 밑변 150, 높이 100의 사각형 범위에 3초간 0.5초마다 지속 공격 -->
+    <AttackFrame AttackType="RepeatAttack" TargetType="Enemy" StartTime="" EndTime="3000" RepeatTick="500" RangeType="Rect" RangeWidth="150" RangeHeight="100" Offset="150, 0, 0" Condition="IceCount >= 3">
+      <!-- 강화 류탄 지속 공격력 (2), 빙결 류탄 빙결 효과 (1) -->
+      <BuffFrame SkillKey="@ICE" BuffIndex="2 1" />
     </AttackFrame>
-    <Variable Name="IceCount" StartTime="" Value="0" Condition="IceCount == 3" />
+
     <NormalBranch StartTime="" EndTime="ActionEnd()">
       <Branch ActionName="StandbyReady_Hover" Condition="ActionEnd()" />
     </NormalBranch>
@@ -497,45 +620,97 @@
 
   <!-- ===================== 오픈 파이어 ===================== -->
 
-  <!-- 니트로 -1, 니트로 이펙트 없음 (시전 섬광 색은 아이템 이펙트라 제외) -->
+  <!-- 오픈 파이어 지상 시전 액션: 지상에서 점프해 높이를 올린 뒤 바로 오픈 파이어로 강제 브랜치 -->
+  <!-- 공격 없음. 애니는 스탠바이 레디 지상 시전과 같은 점프 애니. 준비 액션이라 쿨타임은 None(오픈 파이어에서 시작) -->
+  <OpenFire_Jump SkillKey="@OPENFIRE" CoolTime="None" Animation="ani_skill_jump" StartTime="0" EndTime="" ActionSpeedType="None" GuardType="SuperArmor">
+    <!-- 상승 (값은 영상 대조 후 조정) -->
+    <Variable Name="Height" StartTime="0" EndTime="ActionEnd()" Value="Height + 0.8" />
+
+    <NormalBranch StartTime="" EndTime="ActionEnd()">
+      <Branch ActionName="OpenFire" Condition="ActionEnd()" />
+    </NormalBranch>
+  </OpenFire_Jump>
+
   <!-- 기본: 파열·빙결·섬광 2개씩. VP: 보유 스택만큼 종류별 최대 3개 추가 (첫 개 강화, 2·3번째 일반), 스택 0으로. 강화 카운트는 변화 없음 -->
-  <OpenFire SkillKey="@OPENFIRE" CoolTime="" Animation="ani_openfire" StartTime="0" EndTime="" ActionSpeedType="" GuardType="None">
+  <!-- 공중제비 도는 Ani는 모두 서머솔트 Ani(ani_somersault)로 통합하여 사용 (오픈 파이어, 스바레 공중 캐스팅) -->
+  <!-- 지상에서 시전하면 OpenFire_Jump(점프)를 거쳐 들어옴. 쿨타임은 이 액션에서 시작 -->
+  <OpenFire SkillKey="@OPENFIRE" CoolTime="getSkillCoolTime(@OPENFIRE)" Animation="ani_somersault" StartTime="0" EndTime="" ActionSpeedType="CastSpeed" GuardType="SuperArmor">
+    <!-- 니트로 모터 스택 1 감소 -->
     <Variable Name="NitroStock" StartTime="0" Value="NitroStock - 1" />
 
-    <!-- 기본 6개 -->
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime=""><BuffFrame SkillKey="@BURST" BuffIndex="" /></AttackFrame>
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime=""><BuffFrame SkillKey="@BURST" BuffIndex="" /></AttackFrame>
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime=""><BuffFrame SkillKey="@ICE" BuffIndex="" /></AttackFrame>
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime=""><BuffFrame SkillKey="@ICE" BuffIndex="" /></AttackFrame>
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime=""><BuffFrame SkillKey="@FLASH" BuffIndex="" /></AttackFrame>
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime=""><BuffFrame SkillKey="@FLASH" BuffIndex="" /></AttackFrame>
+    <!-- 밑변 1200, 높이 600의 사각형 범위에 기본 6타격 -->
+    <AttackFrame AttackType="AttackRange" TargetType="Enemy" StartTime="0" RangeType="Rect" RangeWidth="1200" RangeHeight="600" Offset="600, 0, 0">
+      <!-- 0.2초마다 1타격씩 총 6타격 -->
+      <BuffFrame SkillKey="@OPENFIRE" BuffIndex="0(200) 0(400) 0(600) 0(800) 0(1000) 0(1200)" />
+    </AttackFrame>
 
+    <!-- VP1 채택 시, 류탄 일괄 투척 -->
+    <!-- 현재 류탄 스택 반영, 섬광 및 빙결은 강화 투척도 적용 -->
     <!-- VP1 추가 투척: 파열 -->
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; BurstStock >= 1"><BuffFrame SkillKey="@BURST" BuffIndex="" /></AttackFrame>   <!-- 강화 -->
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; BurstStock >= 2"><BuffFrame SkillKey="@BURST" BuffIndex="" /></AttackFrame>
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; BurstStock >= 3"><BuffFrame SkillKey="@BURST" BuffIndex="" /></AttackFrame>
+    <AttackFrame AttackType="AttackRange" TargetType="Enemy" StartTime="0" RangeType="Round" AttackRange="75" AttackAngle="360" Offset="150, 0, 0" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; BurstStock >= 1">
+      <BuffFrame SkillKey="@BURST" StartTime="200" BuffIndex="0" />
+      <!-- 1보다 높은 류탄 스택만큼 파열류탄 데미지 추가 적용, 최대 3스택 -->
+      <BuffFrame SkillKey="@BURST" StartTime="200" BuffIndex="0" Condition="BurstStock >= 2" />
+      <BuffFrame SkillKey="@BURST" StartTime="200" BuffIndex="0" Condition="BurstStock >= 3" />
+
+      <!-- 류탄 스택 0으로 초기화 (액션을 나갈 때. 그 전까지 추가 피해 조건이 원래 스택 수를 봄) -->
+      <Variable Name="BurstStock" StartTime="Escape" Value="0" />
+    </AttackFrame>
+
     <!-- VP1 추가 투척: 섬광 -->
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; FlashStock >= 1"><BuffFrame SkillKey="@FLASH" BuffIndex="" /></AttackFrame>   <!-- 강화 -->
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; FlashStock >= 2"><BuffFrame SkillKey="@FLASH" BuffIndex="" /></AttackFrame>
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; FlashStock >= 3"><BuffFrame SkillKey="@FLASH" BuffIndex="" /></AttackFrame>
-    <!-- VP1 추가 투척: 빙결 -->
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; IceStock >= 1"><BuffFrame SkillKey="@ICE" BuffIndex="" /></AttackFrame>   <!-- 강화 -->
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; IceStock >= 2"><BuffFrame SkillKey="@ICE" BuffIndex="" /></AttackFrame>
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; IceStock >= 3"><BuffFrame SkillKey="@ICE" BuffIndex="" /></AttackFrame>
-    <!-- VP1 추가 투척: 포토빌라이저 (포토빌라이저 VP 습득 시) -->
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; SkillLearned(@PHOTO01) &amp;&amp; PhotonStock >= 1"><BuffFrame SkillKey="@PHOTO" BuffIndex="" /></AttackFrame>
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; SkillLearned(@PHOTO01) &amp;&amp; PhotonStock >= 2"><BuffFrame SkillKey="@PHOTO" BuffIndex="" /></AttackFrame>
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; SkillLearned(@PHOTO01) &amp;&amp; PhotonStock >= 3"><BuffFrame SkillKey="@PHOTO" BuffIndex="" /></AttackFrame>
+    <!-- 1스택에 강화 류탄 적용 -->
+    <AttackFrame AttackType="RepeatAttack" TargetType="Enemy" StartTime="0" EndTime="3000" RepeatTick="500" RangeType="Rect" RangeWidth="150" RangeHeight="100" Offset="150, 0, 0" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; FlashStock >= 1">
+      <BuffFrame SkillKey="@FLASH" StartTime="200" BuffIndex="2 1" />
+
+      <!-- 류탄 스택 0으로 초기화 (1스택 이상이면 항상 실행되도록 이 AttackFrame에 둠, 액션을 나갈 때) -->
+      <Variable Name="FlashStock" StartTime="Escape" Value="0" />
+    </AttackFrame>
+
+    <!-- 2스택부터 일반 류탄 적용 -->
+    <AttackFrame AttackType="AttackRange" TargetType="Enemy" StartTime="0" RangeType="Round" AttackRange="75" AttackAngle="360" Offset="150, 0, 0" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; FlashStock >= 2">
+      <BuffFrame SkillKey="@FLASH" StartTime="200" BuffIndex="0 1" />
+      <BuffFrame SkillKey="@FLASH" StartTime="200" BuffIndex="0 1" Condition="FlashStock >= 3" />
+    </AttackFrame>
+
+    <!-- VP1 추가 투척: 빙결 (섬광과 같은 구조) -->
+    <!-- 1스택에 강화 류탄 적용 -->
+    <AttackFrame AttackType="RepeatAttack" TargetType="Enemy" StartTime="0" EndTime="3000" RepeatTick="500" RangeType="Rect" RangeWidth="150" RangeHeight="100" Offset="150, 0, 0" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; IceStock >= 1">
+      <BuffFrame SkillKey="@ICE" StartTime="200" BuffIndex="2 1" />
+
+      <!-- 류탄 스택 0으로 초기화 (1스택 이상이면 항상 실행되도록 이 AttackFrame에 둠, 액션을 나갈 때) -->
+      <Variable Name="IceStock" StartTime="Escape" Value="0" />
+    </AttackFrame>
+
+    <!-- 2스택부터 일반 류탄 적용 -->
+    <AttackFrame AttackType="AttackRange" TargetType="Enemy" StartTime="0" RangeType="Round" AttackRange="75" AttackAngle="360" Offset="150, 0, 0" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; IceStock >= 2">
+      <BuffFrame SkillKey="@ICE" StartTime="200" BuffIndex="0 1" />
+      <BuffFrame SkillKey="@ICE" StartTime="200" BuffIndex="0 1" Condition="IceStock >= 3" />
+    </AttackFrame>
+
+    <!-- VP1 추가 투척: 포토빌라이저 (포토빌라이저 VP 습득 시, 파열과 같은 구조. 범위는 스킬 조회 후 확인) -->
+    <AttackFrame AttackType="AttackRange" TargetType="Enemy" StartTime="0" RangeType="Round" AttackRange="75" AttackAngle="360" Offset="150, 0, 0" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; SkillLearned(@PHOTO01) &amp;&amp; PhotonStock >= 1">
+      <BuffFrame SkillKey="@PHOTO" StartTime="200" BuffIndex="0" />
+      <!-- 1보다 높은 류탄 스택만큼 포토빌라이저 데미지 추가 적용, 최대 3스택 -->
+      <BuffFrame SkillKey="@PHOTO" StartTime="200" BuffIndex="0" Condition="PhotonStock >= 2" />
+      <BuffFrame SkillKey="@PHOTO" StartTime="200" BuffIndex="0" Condition="PhotonStock >= 3" />
+
+      <!-- 류탄 스택 0으로 초기화 (액션을 나갈 때. 그 전까지 추가 피해 조건이 원래 스택 수를 봄) -->
+      <Variable Name="PhotonStock" StartTime="Escape" Value="0" />
+    </AttackFrame>
 
     <!-- VP1: 보유 류탄 스택 0 (AttackFrame 판정 이후 시점) -->
-    <Variable Name="BurstStock" StartTime="" Value="0" Condition="SkillLearned(@OPENFIRE01)" />
+    <!-- 동작 자체는 동일하나, '투척'으로 인해서 '스택 소모' 라는 결과가 나오는 것이기 때문에 류탄 스택을 초기화하는 Line을 각 류탄 투척 Line 안에 종속적으로 존재하게 배치   -->
+    <!-- <Variable Name="BurstStock" StartTime="" Value="0" Condition="SkillLearned(@OPENFIRE01)" />
     <Variable Name="FlashStock" StartTime="" Value="0" Condition="SkillLearned(@OPENFIRE01)" />
     <Variable Name="IceStock" StartTime="" Value="0" Condition="SkillLearned(@OPENFIRE01)" />
-    <Variable Name="PhotonStock" StartTime="" Value="0" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; SkillLearned(@PHOTO01)" />
+    <Variable Name="PhotonStock" StartTime="" Value="0" Condition="SkillLearned(@OPENFIRE01) &amp;&amp; SkillLearned(@PHOTO01)" /> -->
 
     <ForceLanding_Func />
-    <NormalBranch StartTime="" EndTime="ActionEnd()">
-      <StandbyReadyBranch_Func />
+
+    <NormalBranch StartTime="200" EndTime="ActionEnd()">
+      <!-- 스탠바이 레디 유도: 버프가 있으면 체공으로, 버프가 끝났으면(지속 시간 종료) 피니시로 -->
+      <Branch ActionName="StandbyReady_Hover" Condition="CheckBuff(@STANDBY_BUFF)" />
+      <Branch ActionName="StandbyReady_Finish" Condition="StandbyReady_FinishAttack == True &amp;&amp; !CheckBuff(@STANDBY_BUFF)" />
       <NitroDownBranch_Func />
       <AirBranch_Func />
       <Branch ActionName="Down" Condition="ActionEnd()" />
@@ -544,37 +719,100 @@
 
   <!-- ===================== 스탠바이 레디 ===================== -->
 
-  <!-- 시전 (공중): 액션 자체 무적 (표시용) -->
-  <StandbyReady_Cast SkillKey="@STANDBY" CoolTime="" Animation="ani_standby_cast" StartTime="0" EndTime="" ActionSpeedType="" GuardType="Invincible">
-    <Variable Name="StandbyReady_FinishAttack" StartTime="0" Value="StandbyReady_FinishAttack + 1" />
-    <BuffFrame StartTime="" SkillKey="@STANDBY" BuffIndex="" />   <!-- 지속 시간 버프 -->
+  <!-- 스탠바이 레디 지상 시전 액션 (점프 애니는 오픈 파이어 지상 시전과 공용) -->
+  <StandbyReady_Jump SkillKey="@STANDBY" CoolTime="getSkillCoolTime(@STANDBY)" Animation="ani_skill_jump" StartTime="0" EndTime="" ActionSpeedType="None" GuardType="Invincible">
+    <!-- 상승 (값은 영상 대조 후 조정) -->
+    <Variable Name="Height" StartTime="0" EndTime="ActionEnd()" Value="Height + 0.8" />
+
+    <!-- 피니시 공격 제어용 변수 활성화 -->
+    <Variable Name="StandbyReady_FinishAttack" StartTime="0" Value="True" />
+    <!-- 스탠바이 레디 지속시간 제어용 버프 부여 -->
+    <BuffFrame StartTime="0" SkillKey="@STANDBY" BuffIndex="1" />
+
+    <NormalBranch StartTime="" EndTime="ActionEnd()">
+      <Branch ActionName="StandbyReady_Hover" Condition="ActionEnd()" />
+    </NormalBranch>
+  </StandbyReady_Jump>
+
+  <!-- 스탠바이 레디 공중 시전 액션 (서머솔트 애니) -->
+  <StandbyReady_Cast SkillKey="@STANDBY" CoolTime="getSkillCoolTime(@STANDBY)" Animation="ani_somersault" StartTime="0" EndTime="" ActionSpeedType="None" GuardType="Invincible">
+    <!-- 피니시 공격 제어용 변수 활성화 -->
+    <Variable Name="StandbyReady_FinishAttack" StartTime="0" Value="True" />
+    <!-- 스탠바이 레디 지속시간 제어용 버프 부여 -->
+    <BuffFrame StartTime="0" SkillKey="@STANDBY" BuffIndex="1" />
+    
     <NormalBranch StartTime="" EndTime="ActionEnd()">
       <Branch ActionName="StandbyReady_Hover" Condition="ActionEnd()" />
     </NormalBranch>
   </StandbyReady_Cast>
 
-  <!-- 전용 체공: 분사는 이 액션의 고증 이펙트 (스택 무관). 투척 키를 누르고 있으면 투척과 빠르게 왕복 -->
-  <StandbyReady_Hover SkillKey="None" Animation="ani_standby_hover" StartTime="0" EndTime="" ActionSpeedType="" GuardType="None">
+  <!-- 스탠바이 레디 체공 액션 -->
+  <StandbyReady_Hover SkillKey="@STANDBY" CoolTime="Continue" Animation="ani_standby_hover" StartTime="0" EndTime="2000" ActionSpeedType="None" GuardType="None">
+    <!-- 체공 액션 유지할 경우 위 아래 왔다갔다 하면 호버링 -->
+    <!-- 위 + 아래 묶음 총 3번 -->
+    <Variable Name="Height" StartTime="100" EndTime="400" Value="Height + 0.8" />
+    <Variable Name="Height" StartTime="401" EndTime="700" Value="Height - 0.8" />
+
+    <Variable Name="Height" StartTime="701" EndTime="1000" Value="Height + 0.8" />
+    <Variable Name="Height" StartTime="1001" EndTime="1300" Value="Height - 0.8" />
+
+    <Variable Name="Height" StartTime="1301" EndTime="1600" Value="Height + 0.8" />
+    <Variable Name="Height" StartTime="1601" EndTime="1900" Value="Height - 0.8" />
+    
+    <!-- 체공 상태에서 이동 가능 -->
+    <!-- 이동속도는 고정값, 액션이 변경되지 않기 때문에 Dir 저장하지 않고 입력값 바로 사용 -->
+    <Move Speed="100" Direction="getPlayerDirection()" />
+
     <NormalBranch StartTime="0" EndTime="ActionEnd()">
       <!-- 체공 액션 자신으로 다시 브랜치하지 않도록 StandbyReadyBranch_Func 대신 피니시 줄만 둠 -->
-      <Branch ActionName="StandbyReady_Finish" Condition="StandbyReady_FinishAttack >= 1 &amp;&amp; !CheckBuff(@STANDBY_BUFF)" />
+      <Branch ActionName="StandbyReady_Finish" Condition="StandbyReady_FinishAttack == True &amp;&amp; !CheckBuff(@STANDBY_BUFF)" />
       <Branch ActionName="StandbyReady_Flash" Condition="Skill_@FLASH || (KeyDown &amp;&amp; Skill_@FLASH)" />
       <Branch ActionName="StandbyReady_Ice" Condition="Skill_@ICE || (KeyDown &amp;&amp; Skill_@ICE)" />
+
+      <!-- 스바레 상태에서도 스킬 사용 가능 -->
+      <Branch ActionName="OpenFire" Condition="Skill_@OPENFIRE &amp;&amp; NitroStock >= 1" />
+      <Branch ActionName="AirAttack" Condition="Attack" />
+
+      <!-- 안전장치: 1.9~2초는 호버링 애니로 정지, 그 사이 버프가 꺼지면 위 피니시 줄로 나감 -->
+      <!-- 패킷 로스 등으로 놓치면 하강으로 갔다가 하강의 스탠바이 레디 유도 줄로 바로 피니시 -->
+      <Branch ActionName="Down" Condition="ActionEnd()" />
     </NormalBranch>
   </StandbyReady_Hover>
 
-  <!-- 피니시: 무적, 짧게, 타이밍 제한 없이 모든 액션으로 브랜치 -->
-  <StandbyReady_Finish SkillKey="@STANDBY" Animation="ani_standby_finish" StartTime="0" EndTime="" ActionSpeedType="" GuardType="Invincible">
-    <Variable Name="StandbyReady_FinishAttack" StartTime="0" Value="0" />
-    <AttackFrame AttackType="" TargetType="Enemy" StartTime="">
-      <BuffFrame SkillKey="@STANDBY" BuffIndex="" />
+  <!-- 스탠바이 레디 피니시 액션 -->
+  <!-- 영상으로 확인했을 때 딜레이가 조금 있어서 공격 타이밍 수정 -->
+  <StandbyReady_Finish SkillKey="@STANDBY" CoolTime="Continue" Animation="ani_standby_finish" StartTime="0" EndTime="" ActionSpeedType="CastSpeed" GuardType="Invincible">
+    <!-- 피니시 공격 제어용 변수 초기화 -->
+    <Variable Name="StandbyReady_FinishAttack" StartTime="0" Value="False" />
+
+    <!-- 피니시 공격 적용 -->
+    <!-- 반지름 600px의 범위 1타격 -->
+    <AttackFrame AttackType="AttackRange" TargetType="Enemy" StartTime="100" RangeType="Round" AttackRange="600" AttackAngle="360" Offset="550, 0, 0">
+      <BuffFrame SkillKey="@STANDBY" BuffIndex="0" />
     </AttackFrame>
-    <ForceLanding_Func />
-    <NormalBranch StartTime="0" EndTime="ActionEnd()">
+    
+    <!-- 액션 구조 상 스탠바이 레디 피니시 액션에서 강제 착지할만큼 지상으로 내려올 수 없기 때문에 강제 착지 제거 -->
+
+    <NormalBranch StartTime="100" EndTime="ActionEnd()">
       <NitroDownBranch_Func />
       <AirBranch_Func />
       <Branch ActionName="Down" Condition="ActionEnd()" />
     </NormalBranch>
   </StandbyReady_Finish>
+
+  <!-- ===================== 버스터 샷 ===================== -->
+
+  <!-- 양손 사격 공용 애니(ani_shoot). 상세 수치는 스킬 조회(API) 후 기입 -->
+  <!-- 지상·공중 공용 액션: 끝나면 공중이면 하강, 지상이면 대기 -->
+  <BusterShot SkillKey="@BUSTER" CoolTime="getSkillCoolTime(@BUSTER)" Animation="ani_shoot" StartTime="0" EndTime="" ActionSpeedType="" GuardType="None">
+    <AttackFrame AttackType="" TargetType="Enemy" StartTime="">
+      <BuffFrame SkillKey="@BUSTER" BuffIndex="" />
+    </AttackFrame>
+
+    <NormalBranch StartTime="" EndTime="ActionEnd()">
+      <Branch ActionName="Down" Condition="ActionEnd() &amp;&amp; Height > 0" />
+      <Branch ActionName="Idle" Condition="ActionEnd()" />
+    </NormalBranch>
+  </BusterShot>
 
 </ActionScript>

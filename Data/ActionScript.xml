@@ -34,6 +34,8 @@
   * EndTime은 영상 측정값으로, ActionSpeedType은 스킬마다 지정 예정 (빈칸 = 미지정). Time 칸의 ActionEnd()는 EndTime 측정값이 들어오면 숫자로 교체
   [브랜치] <NormalBranch StartTime="" EndTime="ActionEnd()"> : StartTime~EndTime 구간에서만 브랜치
            <SuperCancelBranch StartTime="" EndTime="ActionEnd()"> : 액션 도중 캔슬 브랜치 (스킬로 평타 캔슬 등)
+           모든 액션의 NormalBranch에는 ActionEnd() 조건의 안전장치 브랜치가 반드시 있어야 함 (SuperCancelBranch에는 두지 않음)
+           <Branch ActionName Condition ActionIgnore="True" /> : 만들지 않은 액션으로 가는 브랜치. 런타임은 조건이 참이어도 건너뛰고, 뷰어는 회색 + 취소선 + "미구현"으로 표시
   [Func 방침] 공통 브랜치·AttackFrame의 Func화는 예정만 하고 최대한 묶는 작업은 지양 (처음 보는 사람이 Func를 매번 찾아가야 해서 문서 이해가 어려움).
               뷰어에서 Func를 편하게 보는 기능이 지원되면 그때 Func화 결정. Func화 후보는 "Func화 예정" 주석으로 표시
   [변수] 변수 관련 Line 정의
@@ -135,6 +137,9 @@
       <!-- 지상 액션으로 브랜치 가능 -->
       <GroundBranch_Func />
       <MoveBranch_Func />
+
+      <!-- 안전장치: 모든 액션에 ActionEnd() 조건 브랜치 필수 -->
+      <Branch ActionName="Idle" Condition="ActionEnd()" />
     </NormalBranch>
   </Idle>
 
@@ -153,6 +158,9 @@
       <!-- 이동 중 자기 자신(Move)으로 재진입하지 않도록 MoveBranch_Func 대신 대시만 -->
       <Branch ActionName="Dash" Condition="Dash" />
       <Branch ActionName="Idle" Condition="!Move" />
+
+      <!-- 안전장치: 모든 액션에 ActionEnd() 조건 브랜치 필수 -->
+      <Branch ActionName="Idle" Condition="ActionEnd()" />
     </NormalBranch>
   </Move>
 
@@ -176,8 +184,8 @@
       <!-- 대시 상태에서 공격 키 누르면 지상 공격 대신 슬라이딩 해야 하므로, Func 사용 불가 -->
       <!-- <Branch ActionName="GroundAttack" Condition="Attack" /> -->
 
-      <!-- 대신 슬라이딩 액션은 구현 X, 브랜치만 -->
-      <Branch ActionName="Sliding" Condition="Attack" />
+      <!-- 대신 슬라이딩 액션은 구현 X, 브랜치만 (ActionIgnore: 런타임은 건너뛰고 뷰어는 미구현 표시) -->
+      <Branch ActionName="Sliding" Condition="Attack" ActionIgnore="True" />
 
       <!-- 대시에서 다시 대시 불가 -->
       <!-- <Branch ActionName="Dash" Condition="Dash" /> -->
@@ -187,6 +195,9 @@
 
       <!-- 키 떼면 정지 -->
       <Branch ActionName="Idle" Condition="!Dash" />
+
+      <!-- 안전장치: 모든 액션에 ActionEnd() 조건 브랜치 필수 -->
+      <Branch ActionName="Idle" Condition="ActionEnd()" />
     </NormalBranch>
   </Dash>
 
@@ -227,6 +238,9 @@
 
       <AirBranch_Func />
       <NitroDownBranch_Func />
+
+      <!-- 안전장치: 모든 액션에 ActionEnd() 조건 브랜치 필수 -->
+      <Branch ActionName="Landing" Condition="ActionEnd()" />
     </NormalBranch>
   </Down>
 

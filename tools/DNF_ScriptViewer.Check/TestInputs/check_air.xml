@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  런타임 확인용 임시 입력 (실제 데이터 아님)
+  공중 평타 확인: 타격이 "800002 스핏파이어 공중 기본 공격"으로 기록되고, 배율에 공중사격 증가가 들어감 (지상 평타 800001보다 배율이 큼)
+-->
+<InputSequence Name="check_air">
+  <Input Time="500" Command="Jump" />
+  <Input Time="700" Command="Attack" Hold="300" />   <!-- 공중 평타 꾹 누르기 -->
+</InputSequence>

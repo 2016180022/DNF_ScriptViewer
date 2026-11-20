@@ -18,16 +18,14 @@ public static partial class KnownNames
         ["getCharacterMoveSpeed"] = 0,// 클라이언트 값: 이동 속도
         ["getSkillCoolTime"] = 1,     // SkillInfo 쿨타임 (ms)
         ["getSkillValue"] = 2,        // SkillInfo 사용 레벨의 {valueN}
+        ["keyDown"] = 1,              // 클라 값: 그 커맨드를 누르고 있는 중 (입력의 Hold 구간)
     };
 
-    /// <summary>입력 커맨드. Skill_{스킬 키}는 따로</summary>
+    /// <summary>입력 커맨드. Skill_{스킬 키}는 따로. 커맨드 이름은 아직 쓰지 않은 눌림(소비형), 누르고 있는 중은 keyDown(커맨드)</summary>
     public static readonly IReadOnlySet<string> InputCommands = new HashSet<string>
     {
         "Jump", "Attack", "Move", "Dash", "NitroDown",
     };
-
-    /// <summary>조건식에서만 쓰는 입력 상태: Hold 구간 동안 참</summary>
-    public const string KeyDown = "KeyDown";
 
     public static readonly IReadOnlySet<string> Literals = new HashSet<string> { "True", "False", "None" };
 

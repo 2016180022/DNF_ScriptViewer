@@ -37,6 +37,7 @@ public static class DiagnosticCodes
         ["LNK006"] = "BuffEdit 대상 오류",
         ["LNK007"] = "식이 참조하는 스킬·값 없음",
         ["LNK008"] = "SkillLearned VP 없음",
+        ["LNK009"] = "장전 대상 변수 없음",
 
         ["EXP001"] = "식 문법 오류",
         ["EXP002"] = "알 수 없는 이름·함수",
@@ -62,11 +63,19 @@ public static class DiagnosticCodes
         ["SEG011"] = "영상 Source 자리 표시",
         ["SEG012"] = "구간 Order 중복",
         ["SEG013"] = "Data 폴더 밖을 가리키는 경로",
+        ["SEG014"] = "시작 State로 들어오는 브랜치 조건과 시작값이 맞지 않음",
 
         ["INP000"] = "입력 시퀀스 알 수 없는 요소",
         ["INP001"] = "입력 Command 오류",
         ["INP002"] = "입력 시각·Hold",
         ["INP003"] = "입력 숫자 형식 오류",
+
+        // 런타임 (구간 실행 결과의 경고)
+        ["RUN001"] = "임시값 사용 (빈 측정값)",
+        ["RUN002"] = "알 수 없는 이름·함수",
+        ["RUN003"] = "데이터 값 계산 불가",
+        ["RUN004"] = "입력 시퀀스 없음",
+        ["RUN005"] = "빈 Value 건너뜀",
     };
 
     public static string Describe(string code) => Descriptions.TryGetValue(code, out var d) ? d : code;

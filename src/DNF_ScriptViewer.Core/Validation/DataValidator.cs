@@ -304,7 +304,7 @@ public static partial class DataValidator
             {
                 var where = $"버프 {buff.Key} {buff.Name}";
                 if (buff.BuffType is BuffType.Unknown or BuffType.Unset)
-                    _d.Warn("BI003", buff.Src, $"{where}: BuffType=\"{buff.BuffTypeRaw}\"는 Attack·Debuff·State·BuffEdit가 아님");
+                    _d.Warn("BI003", buff.Src, $"{where}: BuffType=\"{buff.BuffTypeRaw}\"는 Attack·Debuff·State·BuffEdit·StockRecharge가 아님");
                 if (buff.StackType is StackType.Unknown or StackType.Unset)
                     _d.Warn("BI003", buff.Src, $"{where}: StackType=\"{buff.StackTypeRaw}\"는 None·Refresh·Stack이 아님");
                 if (buff.SkillKey is int sk && HasSkillInfo && Skill(sk) is null)
@@ -320,6 +320,12 @@ public static partial class DataValidator
                     var name = $"Param{i + 1:00}";
                     CheckTempToken(p, buff.Src, $"{where} {name}");
                     if (i == 0 && buff.BuffType is BuffType.Debuff or BuffType.State) continue; // 상태 이름
+                    if (i == 0 && buff.BuffType == BuffType.StockRecharge)
+                    {
+                        if (_set.ActionScript is not null && !_variables.Contains(p.Trim()))
+                            _d.Warn("LNK009", buff.Src, $"{where}: 장전 대상 변수 {p}가 ActionScript CharacterVariables에 없음");
+                        continue;
+                    }
                     if (i == 0 && buff.BuffType == BuffType.BuffEdit)
                     {
                         foreach (var key in XmlKeyList(p, buff.Src, where))
@@ -390,7 +396,7 @@ public static partial class DataValidator
         }
 
         /// <summary>
-        /// 시작 상태·변수 검사. 들어오는 브랜치 조건과 값 대조는 런타임 조건 평가기와 함께 추가 예정
+        /// 시작 상태·변수 검사 + 시작 State로 들어오는 브랜치 조건과 시작값 대조(SEG014, StartConditionCheck)
         /// </summary>
         private void CheckSegmentStart(SegmentDef seg, string where)
         {
@@ -421,6 +427,9 @@ public static partial class DataValidator
                 else if (declKind != "" && startKind != "" && declKind != startKind)
                     _d.Warn("SEG009", sv.Src, $"{where}: 시작 변수 {sv.Name}=\"{sv.Value}\"의 종류({startKind})가 선언값 \"{decl.Value}\"({declKind})와 다름");
             }
+
+            if (a.Actions.ContainsKey(seg.StartState))
+                StartConditionCheck.Check(_set, seg, where, _d);
         }
 
         /// <summary>값 종류: 숫자 / 참거짓 / "" (판단하지 않음 — None 등)</summary>
@@ -525,7 +534,7 @@ public static partial class DataValidator
             if (KnownNames.Literals.Contains(name)) return;
             if (scope == Scope.Script)
             {
-                if (_variables.Contains(name) || _constants.Contains(name) || name == KnownNames.KeyDown) return;
+                if (_variables.Contains(name) || _constants.Contains(name)) return;
                 if (KnownNames.InputCommands.Contains(name)) return;
                 if (KnownNames.SkillCommandKey(name) is int sk)
                 {
@@ -576,6 +585,12 @@ public static partial class DataValidator
                         _d.Warn("LNK007", src, $"{where}: SkillLearned({n})의 스킬({n} 또는 {n / 100})이 SkillInfo에 없음");
                     else if (skill.Evolutions.All(e => e.Type != vp))
                         _d.Warn("LNK008", src, $"{where}: SkillLearned({n}) — 스킬 {skill.Key} {skill.Name}에 VP{vp}가 없음");
+                    break;
+                }
+                case "keyDown":
+                {
+                    if (call.Args[0] is not IdentExpr { Name: var cmd } || !KnownNames.IsInputCommand(cmd))
+                        _d.Warn("EXP003", src, $"{where}: keyDown()의 인자는 입력 커맨드 이름 (Ex. keyDown(Attack), keyDown(Skill_801))");
                     break;
                 }
                 case "getSkillCoolTime":

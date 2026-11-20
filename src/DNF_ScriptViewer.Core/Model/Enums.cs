@@ -13,7 +13,7 @@ public enum RangeType { Unset, Unknown, Round, Rect }
 
 public enum BranchBlockKind { Normal, SuperCancel }
 
-public enum BuffType { Unset, Unknown, Attack, Debuff, State, BuffEdit }
+public enum BuffType { Unset, Unknown, Attack, Debuff, State, BuffEdit, StockRecharge }
 
 public enum StackType { Unset, Unknown, None, Refresh, Stack }
 

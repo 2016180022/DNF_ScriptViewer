@@ -1,0 +1,10 @@
+# 런타임 확인용 실행 목록 (RunChecks.cmd, 검사 도구 --tests)
+# 한 줄에 "<구간 Order> <입력 파일 (이 폴더 기준)>". all = 모든 구간을 각자의 입력 시퀀스(Data/Input)로 실행
+# 입력 파일은 확인용 임시 입력 (실제 데이터 아님)
+
+1 combo_1.xml
+1 check_cooltime.xml
+2 check_air.xml
+5 check_openfire.xml
+6 combo_6.xml
+all

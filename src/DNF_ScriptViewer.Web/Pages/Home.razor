@@ -1,0 +1,61 @@
+@page "/"
+@using DNF_ScriptViewer.Core.Diagnostics
+@using DNF_ScriptViewer.Core.Loading
+@using DNF_ScriptViewer.Core.Validation
+@inject HttpClient Http
+
+<PageTitle>DNF_ScriptViewer</PageTitle>
+
+<h1>DNF_ScriptViewer</h1>
+<p class="sub">데이터 검증 결과 (타임라인 뷰어 화면은 개발 중)</p>
+
+@if (_set is null)
+{
+    <p>데이터를 읽는 중…</p>
+}
+else
+{
+    <p>
+        액션 @(_set.ActionScript?.ActionList.Count ?? 0) · Func @(_set.ActionScript?.FuncList.Count ?? 0) ·
+        스킬 @(_set.SkillInfo?.SkillList.Count ?? 0) · 버프 @(_set.BuffInfo?.BuffList.Count ?? 0) ·
+        구간 @(_set.Segments?.Segments.Count ?? 0) · 입력 시퀀스 @_set.Inputs.Count/@(_set.Inputs.Count + _set.MissingInputs.Count)
+        <button @onclick="LoadAsync">다시 불러오기</button>
+    </p>
+
+    @foreach (var (severity, title) in Sections)
+    {
+        var items = _set.Diagnostics.Items.Where(d => d.Severity == severity).ToList();
+        <details open="@(severity is Severity.Error or Severity.Warning)">
+            <summary class="sev-@severity.ToString().ToLowerInvariant()">@title @(items.Count)건</summary>
+            @foreach (var group in items.GroupBy(d => d.Code).OrderBy(g => g.Key))
+            {
+                <h3>[@group.Key] @DiagnosticCodes.Describe(group.Key) (@group.Count())</h3>
+                <table>
+                    @foreach (var d in group.OrderBy(d => d.Src.File).ThenBy(d => d.Src.Line))
+                    {
+                        <tr><td class="src">@d.Src</td><td>@d.Message</td></tr>
+                    }
+                </table>
+            }
+        </details>
+    }
+}
+
+@code {
+    private DataSet? _set;
+
+    private static readonly (Severity, string)[] Sections =
+    {
+        (Severity.Error, "오류"), (Severity.Warning, "경고"), (Severity.Pending, "측정 대기"), (Severity.Info, "참고"),
+    };
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _set = null;
+        var set = await DataLoader.LoadAsync(new HttpDataSource(Http));
+        DataValidator.Validate(set);
+        _set = set;
+    }
+}

@@ -13,3 +13,6 @@ obj/
 .vs/
 *.user
 *.suo
+
+# 빌드 때 Data/에서 복사되는 툴 데이터 (원본은 Data/)
+/src/DNF_ScriptViewer.Web/wwwroot/Data/

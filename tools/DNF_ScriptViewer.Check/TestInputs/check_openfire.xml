@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  런타임 확인용 임시 입력 (실제 데이터 아님)
+  오픈 파이어 VP1 확인: 공중 시전 시 보유 류탄 일괄 투척(첫 섬광·빙결은 강화), 나갈 때 스택 0 → 장전 시작.
+  착지 후 지상 재시전은 쿨타임(스킬 805) 때문에 OpenFire_Jump로 브랜치하지 않아야 함
+  사용: 검사 도구에 run 5, input tools/DNF_ScriptViewer.Check/TestInputs/check_openfire.xml 옵션 (명령은 검사 도구 Program.cs 머리말)
+-->
+<InputSequence Name="check_openfire">
+  <Input Time="500"  Command="Jump" />
+  <Input Time="800"  Command="Skill_805" />   <!-- 공중 오픈 파이어 VP1 -->
+  <Input Time="4500" Command="Skill_805" />   <!-- 지상 재시전: 쿨타임으로 막혀야 함 -->
+</InputSequence>

@@ -11,7 +11,7 @@
   스크립트 내부에서 사용하는 Variable의 경우 값을 직접 대입 가능 (Ex. Condition="NowDirection != getPlayerDirection()")
 
   [스킬 키] SkillInfo.xml의 SkillKey (2026-11-19 임시 토큰에서 교체)
-  800 스핏파이어 기본 공격 (프로젝트 전용, 공격력 100%)
+  800 스핏파이어 기본 공격 (프로젝트 전용, 공격력 100%. BuffIndex 0 = 지상 평타, 1 = 공중 평타)
   801 G-35L 섬광류탄          802 G-18C 빙결류탄
   803 G-14 파열류탄 (오픈 파이어 투척용, 단독 액션 없음)
   804 포토빌라이저 (오픈 파이어 VP 투척용, 단독 액션 없음)
@@ -27,6 +27,8 @@
   * 값을 바꿀 수 없음 (<Variable>로 변경 시 검증기 경고). 뷰어: 조건 평가에 [상수] 표시, 관련 변수 트랙에 기준선 (구현 후 불편하면 제외)
 
   [입력 커맨드] Jump, Attack, Move, Dash, NitroDown, Skill_{스킬 키}
+  * 커맨드 이름은 아직 쓰지 않은 눌림만 참 (브랜치가 쓰면 소비, 상태가 바뀌면 남은 눌림은 버림)
+  * 누르고 있는 중은 클라 함수 keyDown(커맨드) (Ex. Skill_801 || keyDown(Skill_801) = 누르거나 누르고 있으면)
   [액션 속성] SkillKey(없으면 None), CoolTime(스킬 액션만), Animation, StartTime/EndTime (전체 Ani에서 시작하는 지점과 끝나는 지점), ActionSpeedType (액션의 속도에 반영되는 스탯의 종류, None(고정) | CastSpeed(캐스트 속도) | AttackSpeed(공격 속도)), GuardType(None | Invincible | SuperArmor)
   * ActionSpeedType은 작성만 하고 별도로 계산하지는 않음, 따라서 항상 None으로 적용되며 EndTime == 실제 액션 스피드
   * 아니면 액션 스피드를 알고 있으니 임의의 캐스트 속도 및 공격 속도를 통해서 역산하여 값을 적용하는 방법도 고려
@@ -34,6 +36,8 @@
   * EndTime은 영상 측정값으로, ActionSpeedType은 스킬마다 지정 예정 (빈칸 = 미지정). Time 칸의 ActionEnd()는 EndTime 측정값이 들어오면 숫자로 교체
   [브랜치] <NormalBranch StartTime="" EndTime="ActionEnd()"> : StartTime~EndTime 구간에서만 브랜치
            <SuperCancelBranch StartTime="" EndTime="ActionEnd()"> : 액션 도중 캔슬 브랜치 (스킬로 평타 캔슬 등)
+           모든 액션의 NormalBranch에는 ActionEnd() 조건의 안전장치 브랜치가 반드시 있어야 함 (SuperCancelBranch에는 두지 않음)
+           <Branch ActionName Condition ActionIgnore="True" /> : 만들지 않은 액션으로 가는 브랜치. 런타임은 조건이 참이어도 건너뛰고, 뷰어는 회색 + 취소선 + "미구현"으로 표시
   [Func 방침] 공통 브랜치·AttackFrame의 Func화는 예정만 하고 최대한 묶는 작업은 지양 (처음 보는 사람이 Func를 매번 찾아가야 해서 문서 이해가 어려움).
               뷰어에서 Func를 편하게 보는 기능이 지원되면 그때 Func화 결정. Func화 후보는 "Func화 예정" 주석으로 표시
   [변수] 변수 관련 Line 정의
@@ -46,6 +50,8 @@
   [CoolTime] 기본적으로 스킬의 쿨타임 불러오는 함수 사용 (getSkillCoolTime(@SkillKey)) (류탄은 지상·공중 고정값, 스탠바이 투척은 0)
   * 쿨타임 속성을 적용한 액션 진입과 동시에 쿨타임 시작 (보통 스킬의 가장 첫 액션에서 적용)
   * 속성에 None 적용 시 비활성화 처리 (차징, 준비 액션 등에서 사용), Continue 적용 시 기존 쿨타임 정보를 따름 (첫 액션에서는 사용 불가)
+  * 쿨타임은 스킬 키 단위로 공유 (Ex. 지상 섬광 투척 뒤 3초 동안 공중 섬광도 불가). 값과 시작 시점은 들어간 액션의 CoolTime
+  * 스킬 키가 있는 액션으로 브랜치할 때 그 스킬의 쿨타임이 남아 있으면 브랜치하지 않음. None도 검사함(타이머는 만들지 않음), Continue는 검사하지 않음(하위 액션)
   [니트로 0] 공중에서 모든 스킬 불가. 공중 평타, 하강(액션 안 이동 가능), 니트로 하강만 가능
   [BuffFrame] BuffFrame 안에 StartTime을 둔 이유: AttackFrame의 StartTime을 늦게 적용하면 액션에는 진입했는데, AttackFrame 들어가기 전에 강제로 액션이 끊겼을 경우에는 공격하지 않는 경우가 있음. 인게임에서 테스트했을 때 공격이 끊기지 않는다면 0ms에 AttackFrame이 바로 발동한다고 보고, BuffIndex 적용 타이밍을 뒤로 미뤄서 실제 공격 타이밍을 맞춤.
   [BuffIndex] BuffIndex의 Index값 뒤 () 안에 있는 숫자는 딜레이를 부여. 단위는 ms.
@@ -135,6 +141,9 @@
       <!-- 지상 액션으로 브랜치 가능 -->
       <GroundBranch_Func />
       <MoveBranch_Func />
+
+      <!-- 안전장치: 모든 액션에 ActionEnd() 조건 브랜치 필수 -->
+      <Branch ActionName="Idle" Condition="ActionEnd()" />
     </NormalBranch>
   </Idle>
 
@@ -152,7 +161,10 @@
       <GroundBranch_Func />
       <!-- 이동 중 자기 자신(Move)으로 재진입하지 않도록 MoveBranch_Func 대신 대시만 -->
       <Branch ActionName="Dash" Condition="Dash" />
-      <Branch ActionName="Idle" Condition="!Move" />
+      <Branch ActionName="Idle" Condition="!keyDown(Move)" />
+
+      <!-- 안전장치: 모든 액션에 ActionEnd() 조건 브랜치 필수 -->
+      <Branch ActionName="Idle" Condition="ActionEnd()" />
     </NormalBranch>
   </Move>
 
@@ -176,8 +188,8 @@
       <!-- 대시 상태에서 공격 키 누르면 지상 공격 대신 슬라이딩 해야 하므로, Func 사용 불가 -->
       <!-- <Branch ActionName="GroundAttack" Condition="Attack" /> -->
 
-      <!-- 대신 슬라이딩 액션은 구현 X, 브랜치만 -->
-      <Branch ActionName="Sliding" Condition="Attack" />
+      <!-- 대신 슬라이딩 액션은 구현 X, 브랜치만 (ActionIgnore: 런타임은 건너뛰고 뷰어는 미구현 표시) -->
+      <Branch ActionName="Sliding" Condition="Attack" ActionIgnore="True" />
 
       <!-- 대시에서 다시 대시 불가 -->
       <!-- <Branch ActionName="Dash" Condition="Dash" /> -->
@@ -186,7 +198,10 @@
       <Branch ActionName="Move" Condition="Move &amp;&amp; getPlayerDirection() == -NowDirection" />
 
       <!-- 키 떼면 정지 -->
-      <Branch ActionName="Idle" Condition="!Dash" />
+      <Branch ActionName="Idle" Condition="!keyDown(Dash)" />
+
+      <!-- 안전장치: 모든 액션에 ActionEnd() 조건 브랜치 필수 -->
+      <Branch ActionName="Idle" Condition="ActionEnd()" />
     </NormalBranch>
   </Dash>
 
@@ -227,6 +242,9 @@
 
       <AirBranch_Func />
       <NitroDownBranch_Func />
+
+      <!-- 안전장치: 모든 액션에 ActionEnd() 조건 브랜치 필수 -->
+      <Branch ActionName="Landing" Condition="ActionEnd()" />
     </NormalBranch>
   </Down>
 
@@ -269,8 +287,8 @@
 
   <!-- 지상 평타 1~6타 Loop: 같은 액션 안에서 Loop 횟수로 7타 진입 제어 -->
   <!-- LoopCount() = 이 액션으로 연속 재진입한 횟수 (런타임 함수, 1타 = 0) -->
-  <!-- Loop 브랜치는 특정 시간대(StartTime~EndTime)에만, 키 입력(Attack)과 키 유지(KeyDown) 모두 허용 -->
-  <GroundAttack SkillKey="None" Animation="ani_ground_shoot" StartTime="0" EndTime="" ActionSpeedType="" GuardType="None">
+  <!-- Loop 브랜치는 특정 시간대(StartTime~EndTime)에만, 키 입력(Attack)과 키 유지(keyDown(Attack)) 모두 허용 -->
+  <GroundAttack SkillKey="None" Animation="ani_ground_shoot" StartTime="0" EndTime="130" ActionSpeedType="" GuardType="None">
     <!-- Func화 예정: 평타 탄 AttackFrame 3종 (지상 평타·7타·공중 평타 공통) -->
 
     <!-- 탄 버프 X -->
@@ -298,10 +316,10 @@
       <BuffFrame SkillKey="810" BuffIndex="0" />
     </AttackFrame>
 
-    <!-- 평타가 나가야 브랜치 가능 -->
-    <NormalBranch StartTime="3" EndTime="ActionEnd()">
-      <Branch ActionName="GroundAttack_Finish" Condition="(Attack || KeyDown) &amp;&amp; LoopCount() >= 5" />
-      <Branch ActionName="GroundAttack" Condition="(Attack || KeyDown) &amp;&amp; LoopCount() &lt; 5" />
+    <!-- 평타가 나가야 브랜치 가능. 1~6타 길이 130ms (테스트 영상 6타 약 1000ms의 평균, 정밀 측정 때 다시) — Loop는 한 타가 끝날 때 -->
+    <NormalBranch StartTime="130" EndTime="ActionEnd()">
+      <Branch ActionName="GroundAttack_Finish" Condition="(Attack || keyDown(Attack)) &amp;&amp; LoopCount() >= 5" />
+      <Branch ActionName="GroundAttack" Condition="(Attack || keyDown(Attack)) &amp;&amp; LoopCount() &lt; 5" />
 
       <!-- 평타를 캔슬하고 움직여지면 안되기 때문에 여기로 옮김 -->
       <MoveBranch_Func />
@@ -372,12 +390,12 @@
 
     <!-- 탄 버프 X -->
     <AttackFrame AttackType="AttackArrow" TargetType="Enemy" StartTime="1" AttackRange="800" ArrowSpeed="200" PiercingMaxCount="5" PiercingPercent="60" Condition="!CheckBuff(809002) &amp;&amp; !CheckBuff(810002)">
-      <BuffFrame SkillKey="800" BuffIndex="0" />
+      <BuffFrame SkillKey="800" BuffIndex="1" />
     </AttackFrame>
 
     <!-- 폭발탄 -->
     <AttackFrame AttackType="AttackArrow" TargetType="Enemy" StartTime="" AttackRange="800" ArrowSpeed="200" PiercingMaxCount="0" PiercingPercent="0" Condition="CheckBuff(809002)">
-      <BuffFrame SkillKey="800" BuffIndex="0" />
+      <BuffFrame SkillKey="800" BuffIndex="1" />
       <AttackFrame AttackType="AttackRange" TargetType="Enemy" StartTime="0" RangeType="Round" AttackRange="80" AttackAngle="30" Offset="0, 0, 0">
         <BuffFrame SkillKey="809" BuffIndex="0" />
       </AttackFrame>
@@ -401,7 +419,7 @@
 
     <!-- 평타가 나가야 브랜치 가능 -->
     <NormalBranch StartTime="" EndTime="ActionEnd()">
-      <Branch ActionName="AirAttack" Condition="(Attack || KeyDown) &amp;&amp; LoopCount() &lt; 16" />
+      <Branch ActionName="AirAttack" Condition="(Attack || keyDown(Attack)) &amp;&amp; LoopCount() &lt; 16" />
       
       <!-- 공중 기본 공격 시 마지막 공격 이후에만 스탠바이 레디 피니시가 나가는 스펙 확인하여 Func 제거 -->
       <!-- <StandbyReadyBranch_Func /> -->
@@ -784,8 +802,8 @@
     <NormalBranch StartTime="0" EndTime="ActionEnd()">
       <!-- 체공 액션 자신으로 다시 브랜치하지 않도록 StandbyReadyBranch_Func 대신 피니시 줄만 둠 -->
       <Branch ActionName="StandbyReady_Finish" Condition="StandbyReady_FinishAttack == True &amp;&amp; !CheckBuff(806002)" />
-      <Branch ActionName="StandbyReady_Flash" Condition="Skill_801 || (KeyDown &amp;&amp; Skill_801)" />
-      <Branch ActionName="StandbyReady_Ice" Condition="Skill_802 || (KeyDown &amp;&amp; Skill_802)" />
+      <Branch ActionName="StandbyReady_Flash" Condition="Skill_801 || keyDown(Skill_801)" />
+      <Branch ActionName="StandbyReady_Ice" Condition="Skill_802 || keyDown(Skill_802)" />
 
       <!-- 스바레 상태에서도 스킬 사용 가능 -->
       <Branch ActionName="OpenFire" Condition="Skill_805 &amp;&amp; NitroStock >= 1" />

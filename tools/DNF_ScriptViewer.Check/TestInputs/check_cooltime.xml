@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  런타임 확인용 임시 입력 (실제 데이터 아님)
+  쿨타임 공유·장전 확인: 지상 섬광(쿨타임 3000) 직후 공중 섬광은 막히고, 빙결은 따로 나가야 함. 섬광 스택은 3000ms 뒤 다시 3
+  사용: 검사 도구에 run 1, input tools/DNF_ScriptViewer.Check/TestInputs/check_cooltime.xml 옵션 (명령은 검사 도구 Program.cs 머리말)
+-->
+<InputSequence Name="check_cooltime">
+  <Input Time="500"  Command="Skill_801" />   <!-- 지상 섬광: 801 쿨타임 3000 시작, FlashStock 3 → 2, 장전 타이머 시작 -->
+  <Input Time="1500" Command="Jump" />
+  <Input Time="1700" Command="Skill_801" />   <!-- 공중 섬광: 801 쿨타임이 남아 막혀야 함 -->
+  <Input Time="1800" Command="Skill_802" />   <!-- 공중 빙결: 다른 스킬이라 나가야 함 -->
+</InputSequence>

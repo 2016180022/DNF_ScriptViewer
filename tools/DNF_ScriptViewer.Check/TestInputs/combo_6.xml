@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  런타임 확인용 임시 입력 (실제 데이터 아님)
+  연계 6 스탠바이 레디: 류탄 키를 꾹 누르고 있으면 체공 ↔ 투척이 투척 애니 길이만큼 빠르게 반복되는지 확인
+  사용: 검사 도구에 run 6, input tools/DNF_ScriptViewer.Check/TestInputs/combo_6.xml 옵션 (명령은 검사 도구 Program.cs 머리말)
+-->
+<InputSequence Name="test_combo_6">
+  <Input Time="860"  Command="Jump" />
+  <Input Time="1360" Command="Skill_806" />                <!-- 공중 시전 -->
+  <Input Time="1600" Command="Skill_801" Hold="1000" />    <!-- 섬광 꾹 누르기 -->
+  <Input Time="2700" Command="Skill_802" Hold="500" />     <!-- 빙결 꾹 누르기 -->
+</InputSequence>

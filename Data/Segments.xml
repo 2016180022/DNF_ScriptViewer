@@ -67,7 +67,7 @@
     <Mark Time="1150" State="Jump" />
     <Mark Time="1950" State="AirAttack" />
     <Mark Time="5000" State="Landing" />
-    <Mark Time="5150" State="WakeUp" />
+    <Mark Time="5150" State="Crouch" />
     <Mark Time="5300" State="Idle" />
     <Mark Time="7350" State="Jump" />
     <Mark Time="8000" State="Flash_Air" />
@@ -171,7 +171,7 @@
       <Variable Name="IceStock" Value="3" />
       <Variable Name="FlashCount" Value="0" />   <!-- TODO: 연계 5까지의 누적값 확인 -->
       <Variable Name="IceCount" Value="0" />
-      <Variable Name="StandbyReady_FinishAttack" Value="0" />
+      <Variable Name="StandbyReady_FinishAttack" Value="False" />
     </Start>
     <Mark Time="0"    State="Idle" />
     <Mark Time="860"  State="Jump" />

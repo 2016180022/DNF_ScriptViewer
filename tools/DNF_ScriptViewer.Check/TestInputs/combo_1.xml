@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  런타임 확인용 임시 입력 (실제 데이터 아님 — 실제 입력 시퀀스는 최종본 녹화 후 Data/Input/에 작성)
+  연계 1 지상 평타·류탄: 테스트 영상 Mark 시각을 보고 대략 맞춤
+  사용: 검사 도구에 run 1, input tools/DNF_ScriptViewer.Check/TestInputs/combo_1.xml 옵션 (명령은 검사 도구 Program.cs 머리말)
+-->
+<InputSequence Name="test_combo_1">
+  <Input Time="700"  Command="Attack" Hold="1000" />  <!-- 평타 꾹 누르기 → Loop 6타 후 7타 -->
+  <Input Time="3550" Command="Skill_801" />          <!-- 지상 섬광 -->
+  <Input Time="5700" Command="Skill_802" />          <!-- 지상 빙결 -->
+</InputSequence>

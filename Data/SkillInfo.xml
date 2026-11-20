@@ -12,7 +12,7 @@
 <SkillInfo>
 
   <!-- 프로젝트 전용: 스핏파이어 기본 공격 (API에 없는 항목). 기본 공격 피해는 100% (프레이야는 독립 공격력 캐릭터라 공격력 100과 같음) -->
-  <Skill SkillKey="800" Source="Project" Name="스핏파이어 기본 공격" Type="basic" MaxLevel="1" RequiredLevel="1" RequiredLevelRange="" BuffKey="800001">
+  <Skill SkillKey="800" Source="Project" Name="스핏파이어 기본 공격" Type="basic" MaxLevel="1" RequiredLevel="1" RequiredLevelRange="" BuffKey="800001, 800002">
     <Desc>지상·공중 평타 사격의 기본 피해</Desc>
     <LevelInfo Variant="Base" OptionDesc="공격력 : {value1}%" MaxError="0">
       <Base Value1="100" />
@@ -20,7 +20,7 @@
     </LevelInfo>
   </Skill>
 
-  <Skill SkillKey="801" ApiSkillId="c61f5a010370101402b05b21916c2071" Name="G-35L 섬광류탄" Type="active" MaxLevel="70" RequiredLevel="25" RequiredLevelRange="2" BuffKey="801001, 2001, 801002">
+  <Skill SkillKey="801" ApiSkillId="c61f5a010370101402b05b21916c2071" Name="G-35L 섬광류탄" Type="active" MaxLevel="70" RequiredLevel="25" RequiredLevelRange="2" BuffKey="801001, 2001, 801002, 801003">
     <Desc>전방으로 섬광류탄을 투척하여 범위내 대상에게 피해를 입히고 감전 상태 이상을 유발한다.&#10;섬광류탄은 최대 장전수와 장전 쿨타임을 가지며 방향키 위/아래 입력후 시전 시 투척 위치를 조절할 수 있다.&#10;결투장에서는 감전효과가 적용되지 않는다.</Desc>
     <DescDetail>전방으로 섬광류탄을 투척하여 범위내 대상에게 피해를 입히고 감전 상태 이상을 유발한다.&#10;섬광류탄은 최대 장전수와 장전 쿨타임을 가지며 방향키 위/아래 입력후 시전 시 투척 위치를 조절할 수 있다.&#10;결투장에서는 감전효과가 적용되지 않는다.</DescDetail>
     <DescSpecial>지상에서 방향키 입력 시 투척 방향 변경</DescSpecial>
@@ -37,7 +37,7 @@
     </Enhancement>
   </Skill>
 
-  <Skill SkillKey="802" ApiSkillId="202edb928046f4fa6dedf6337377efd5" Name="G-18C 빙결류탄" Type="active" MaxLevel="70" RequiredLevel="30" RequiredLevelRange="2" BuffKey="802001, 2002, 802002">
+  <Skill SkillKey="802" ApiSkillId="202edb928046f4fa6dedf6337377efd5" Name="G-18C 빙결류탄" Type="active" MaxLevel="70" RequiredLevel="30" RequiredLevelRange="2" BuffKey="802001, 2002, 802002, 802003">
     <Desc>전방으로 빙결류탄을 투척하여 범위내 대상에게 피해를 입히고 빙결 상태 이상을 유발한다.&#10;빙결류탄은 최대 장전수와 장전 쿨타임을 가지며 방향키 위/아래 입력후 시전 시 투척 위치를 조절할 수 있다.</Desc>
     <DescDetail>전방으로 빙결류탄을 투척하여 범위내 대상에게 피해를 입히고 빙결 상태 이상을 유발한다.&#10;빙결류탄은 최대 장전수와 장전 쿨타임을 가지며 방향키 위/아래 입력후 시전 시 투척 위치를 조절할 수 있다.</DescDetail>
     <DescSpecial>지상에서 방향키 입력 시 투척 방향 변경&#10;피격된 적 빙결</DescSpecial>
@@ -54,7 +54,7 @@
     </Enhancement>
   </Skill>
 
-  <Skill SkillKey="803" ApiSkillId="de3fea2d65c597f4d55c70a02b97fc79" Name="G-14 파열류탄" Type="active" MaxLevel="70" RequiredLevel="15" RequiredLevelRange="2" BuffKey="803001">
+  <Skill SkillKey="803" ApiSkillId="de3fea2d65c597f4d55c70a02b97fc79" Name="G-14 파열류탄" Type="active" MaxLevel="70" RequiredLevel="15" RequiredLevelRange="2" BuffKey="803001, 803002">
     <Desc>전방으로 파열류탄을 투척하여 범위내 대상에게 피해를 입힌다.&#10;파열류탄은 최대 장전수와 장전 쿨타임을 가지며 방향키 위/아래 입력후 시전 시 투척 위치를 조절할 수 있고 스핏파이어 전직 시 기본 사격을 캔슬하고 투척이 가능하다.</Desc>
     <DescDetail>전방으로 파열류탄을 투척하여 범위내 대상에게 피해를 입힌다.&#10;파열류탄은 최대 장전수와 장전 쿨타임을 가지며 방향키 위/아래 입력후 시전 시 투척 위치를 조절할 수 있고 스핏파이어 전직 시 기본 사격을 캔슬하고 투척이 가능하다.</DescDetail>
     <DescSpecial>지상에서 방향키 입력 시 투척 방향 변경&#10;[스핏파이어 전직 시]&#10;- 기본 공격 중 캔슬하여 사용 가능</DescSpecial>
